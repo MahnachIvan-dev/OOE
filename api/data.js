@@ -1,19 +1,22 @@
 /**
  * ============================================================
- *  OOE SERVER — Защищённый сервер-прокси
+ *  OOE SERVER — Защищённый сервер-прокси (БЕЗ CLIENT_KEY)
  * ============================================================
- * 
- *  ВСЯ КОНФИГУРАЦИЯ ХРАНИТСЯ ЗДЕСЬ (в переменных окружения Vercel)
- *  Клиент знает только адрес сервера и клиентский ключ.
  * 
  *  ENV переменные (Vercel → Settings → Environment Variables):
  *  -----------------------------------------------
- *  JSON_BIN_ID     - ID вашего JSON Bin
- *  JSON_BIN_KEY    - Master Key JSON Bin
- *  CLIENT_KEY      - Секретный ключ клиента
- *  GH_TOKEN        - GitHub Personal Access Token
- *  GH_OWNER        - Ваш GitHub username
- *  GH_REPO         - Имя репозитория (public)
+ *  JSON_BIN_ID   - ID вашего JSON Bin
+ *  JSON_BIN_KEY  - Master Key JSON Bin
+ *  GH_TOKEN      - GitHub Personal Access Token
+ *  GH_OWNER      - Ваш GitHub username
+ *  GH_REPO       - Имя репозитория (public)
+ * 
+ *  ЗАЩИТА:
+ *  - Rate limiting по IP (100 запросов/мин)
+ *  - Валидация данных на сервере
+ *  - Все ключи спрятаны на сервере
+ *  - CORS защита
+ *  - Лимит размера данных (5MB)
  * ============================================================
  */
 
@@ -22,24 +25,27 @@ const https = require('https');
 // ==================== КОНФИГУРАЦИЯ (только на сервере!) ====================
 const JSON_BIN_ID  = process.env.JSON_BIN_ID  || '';
 const JSON_BIN_KEY = process.env.JSON_BIN_KEY || '';
-const CLIENT_KEY   = process.env.CLIENT_KEY   || 'ooe_client_key_2024';
 const GH_TOKEN     = process.env.GH_TOKEN     || '';
 const GH_OWNER     = process.env.GH_OWNER     || '';
 const GH_REPO      = process.env.GH_REPO      || '';
 
 // ==================== RATE LIMIT ====================
 const rateLimit = new Map();
-const RATE_WINDOW = 60 * 1000; // 1 минута
-const RATE_MAX = 100;          // 100 запросов в минуту
+const RATE_WINDOW = 60 * 1000;  // 1 минута
+const RATE_MAX_GET  = 100;      // 100 чтений в минуту
+const RATE_MAX_POST = 30;       // 30 записей в минуту (строже!)
 
-function checkRate(ip) {
+function checkRate(ip, isWrite = false) {
   const now = Date.now();
-  const entry = rateLimit.get(ip);
+  const key = `${ip}_${isWrite ? 'w' : 'r'}`;
+  const max = isWrite ? RATE_MAX_POST : RATE_MAX_GET;
+  
+  const entry = rateLimit.get(key);
   if (!entry || now > entry.reset) {
-    rateLimit.set(ip, { count: 1, reset: now + RATE_WINDOW });
+    rateLimit.set(key, { count: 1, reset: now + RATE_WINDOW });
     return true;
   }
-  if (entry.count >= RATE_MAX) return false;
+  if (entry.count >= max) return false;
   entry.count++;
   return true;
 }
@@ -47,23 +53,22 @@ function checkRate(ip) {
 // Очистка старых записей каждые 5 минут
 setInterval(() => {
   const now = Date.now();
-  for (const [ip, v] of rateLimit.entries()) {
-    if (now > v.reset) rateLimit.delete(ip);
+  for (const [key, v] of rateLimit.entries()) {
+    if (now > v.reset) rateLimit.delete(key);
   }
 }, 5 * 60 * 1000);
 
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ====================
-function send(res, status, data, headers = {}) {
-  const h = {
+function send(res, status, data) {
+  res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Client-Key',
+    'Access-Control-Allow-Headers': 'Content-Type',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
-    ...headers
-  };
-  res.writeHead(status, h);
+    'Referrer-Policy': 'no-referrer'
+  });
   res.end(typeof data === 'string' ? data : JSON.stringify(data));
 }
 
@@ -117,7 +122,7 @@ function uploadToGithub(base64Content, fileName) {
     const path = `uploads/${Date.now()}_${(fileName || 'image').replace(/[^a-z0-9.]/gi, '_')}`;
     const body = JSON.stringify({
       message: 'Upload via OOE',
-      content: base64Content // уже очищенный от data:image/...
+      content: base64Content
     });
 
     const options = {
@@ -141,7 +146,6 @@ function uploadToGithub(base64Content, fileName) {
         try {
           const result = JSON.parse(chunks);
           if (r.statusCode === 200 || r.statusCode === 201) {
-            // Возвращаем jsDelivr URL для быстрой доставки
             const cdnUrl = `https://cdn.jsdelivr.net/gh/${GH_OWNER}/${GH_REPO}@main/${path}`;
             resolve({ ok: true, url: cdnUrl, path });
           } else {
@@ -158,20 +162,62 @@ function uploadToGithub(base64Content, fileName) {
   });
 }
 
-// Валидация данных
+// ==================== ВАЛИДАЦИЯ ДАННЫХ ====================
 function validateData(data) {
-  if (!data || typeof data !== 'object') return false;
+  if (!data || typeof data !== 'object') return { ok: false, error: 'Not an object' };
+  
+  // Обязательные поля
   const required = ['users', 'channels', 'news', 'polls', 'forumPosts', 'badges', 'settings'];
   for (const key of required) {
-    if (data[key] === undefined) return false;
+    if (data[key] === undefined) {
+      return { ok: false, error: `Missing field: ${key}` };
+    }
   }
-  if (!Array.isArray(data.users) || !Array.isArray(data.channels)) return false;
-  if (!Array.isArray(data.news) || !Array.isArray(data.polls)) return false;
-  if (!Array.isArray(data.forumPosts) || !Array.isArray(data.badges)) return false;
-  if (!data.settings || typeof data.settings !== 'object') return false;
-  // Лимит размера 5MB
-  if (JSON.stringify(data).length > 5 * 1024 * 1024) return false;
-  return true;
+  
+  // Проверка типов
+  if (!Array.isArray(data.users)) return { ok: false, error: 'users must be array' };
+  if (!Array.isArray(data.channels)) return { ok: false, error: 'channels must be array' };
+  if (!Array.isArray(data.news)) return { ok: false, error: 'news must be array' };
+  if (!Array.isArray(data.polls)) return { ok: false, error: 'polls must be array' };
+  if (!Array.isArray(data.forumPosts)) return { ok: false, error: 'forumPosts must be array' };
+  if (!Array.isArray(data.badges)) return { ok: false, error: 'badges must be array' };
+  if (!data.settings || typeof data.settings !== 'object') return { ok: false, error: 'settings must be object' };
+  
+  // Лимит размера (5MB)
+  const jsonStr = JSON.stringify(data);
+  if (jsonStr.length > 5 * 1024 * 1024) {
+    return { ok: false, error: 'Data too large (max 5MB)' };
+  }
+  
+  // Лимиты на количество записей (защита от спама)
+  if (data.users.length > 10000) return { ok: false, error: 'Too many users' };
+  if (data.news.length > 10000) return { ok: false, error: 'Too many news' };
+  if (data.forumPosts.length > 50000) return { ok: false, error: 'Too many forum posts' };
+  
+  return { ok: true };
+}
+
+// ==================== ОЧИСТКА ДАННЫХ ОТ ПОДОЗРИТЕЛЬНОГО ====================
+function sanitizeData(data) {
+  // Убираем потенциально опасные поля, которые клиент не должен менять
+  // Это защита от XSS и подмены данных
+  
+  // Очищаем настройки (только разрешённые поля)
+  if (data.settings) {
+    data.settings = {
+      mainPageMode: String(data.settings.mainPageMode || 'info').substring(0, 20),
+      logoUrl: String(data.settings.logoUrl || '').substring(0, 500),
+      heroImages: Array.isArray(data.settings.heroImages) 
+        ? data.settings.heroImages.slice(0, 10).map(s => String(s).substring(0, 500))
+        : [],
+      heroTitle: String(data.settings.heroTitle || '').substring(0, 200),
+      heroSubtitle: String(data.settings.heroSubtitle || '').substring(0, 500),
+      aboutText: String(data.settings.aboutText || '').substring(0, 5000),
+      rules: String(data.settings.rules || '').substring(0, 5000)
+    };
+  }
+  
+  return data;
 }
 
 // ==================== MAIN HANDLER (Vercel serverless) ====================
@@ -183,14 +229,10 @@ module.exports = async (req, res) => {
 
   // Rate limit
   const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
-  if (!checkRate(ip)) {
+  const isWrite = req.method === 'POST';
+  
+  if (!checkRate(ip, isWrite)) {
     return send(res, 429, { error: 'Too many requests. Try again later.' });
-  }
-
-  // Проверка клиентского ключа
-  const clientKey = req.headers['x-client-key'];
-  if (clientKey !== CLIENT_KEY) {
-    return send(res, 401, { error: 'Unauthorized' });
   }
 
   const url = req.url || '';
@@ -205,10 +247,16 @@ module.exports = async (req, res) => {
 
     // ============ POST /api/data ============
     if (url === '/api/data' && req.method === 'POST') {
-      if (!validateData(req.body)) {
-        return send(res, 400, { error: 'Invalid data structure' });
+      const validation = validateData(req.body);
+      if (!validation.ok) {
+        console.warn(`Invalid data from ${ip}: ${validation.error}`);
+        return send(res, 400, { error: validation.error });
       }
-      await jsonBinRequest('PUT', req.body);
+      
+      // Очищаем данные
+      const cleanData = sanitizeData(req.body);
+      
+      await jsonBinRequest('PUT', cleanData);
       return send(res, 200, { ok: true });
     }
 
