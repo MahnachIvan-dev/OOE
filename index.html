@@ -11,14 +11,12 @@
 ================================================================================
   OOE — ИНФОРМАЦИОННЫЙ ПОРТАЛ
   
-  НАСТРОЙКА (всего 2 параметра в начале <script>):
+  НАСТРОЙКА (всего 1 параметр в начале <script>):
   -----------------------------------------------
-  1. API_URL    — адрес вашего сервера на Vercel
-                  Например: 'https://ooe-portal.vercel.app/api'
-  2. CLIENT_KEY — должен совпадать с CLIENT_KEY на сервере
-                  (задаётся в переменных окружения Vercel)
+  API_URL — адрес вашего сервера на Vercel
+            Например: 'https://ooe-portal.vercel.app/api'
   
-  ВСЕ ОСТАЛЬНЫЕ КЛЮЧИ (JSON Bin, GitHub) хранятся ТОЛЬКО на сервере!
+  ВСЕ КЛЮЧИ (JSON Bin, GitHub) хранятся ТОЛЬКО на сервере!
   В HTML коде их НЕТ — это защищает вашу БД от кражи.
   
   ГДЕ МЕНЯТЬ ЛОГОТИП И КАРТИНКИ:
@@ -696,9 +694,8 @@ textarea.form-input { resize: vertical; min-height: 100px; }
 <script>
 /* ====================================================================
  *  КОНФИГУРАЦИЯ КЛИЕНТА
- *  В HTML хранятся ТОЛЬКО:
- *    - API_URL    → адрес сервера (где лежит вся остальная конфигурация)
- *    - CLIENT_KEY → должен совпадать с CLIENT_KEY в env сервера
+ *  В HTML хранится ТОЛЬКО:
+ *    - API_URL → адрес сервера (где лежит вся остальная конфигурация)
  *  Все ключи (JSON Bin, GitHub) хранятся на сервере!
  * ==================================================================== */
 const CFG = {
@@ -706,8 +703,6 @@ const CFG = {
   // Например: 'https://ooe-portal.vercel.app/api'
   API_URL: '',
   // ▲▲▲ URL СЕРВЕРА ▲▲▲
-  
-  CLIENT_KEY: 'ooe_client_key_2024',
   
   DEF_AVATAR: 'https://api.dicebear.com/7.x/initials/svg?seed=',
   MAX_SAME_MESSAGES: 5,
@@ -756,9 +751,7 @@ const API = {
       return null;
     }
     try {
-      const r = await fetch(`${CFG.API_URL}/data`, {
-        headers: { 'X-Client-Key': CFG.CLIENT_KEY }
-      });
+      const r = await fetch(`${CFG.API_URL}/data`);
       if (r.ok) return await r.json();
       console.error('Load error:', r.status);
       return null;
@@ -776,10 +769,7 @@ const API = {
     try {
       const r = await fetch(`${CFG.API_URL}/data`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Client-Key': CFG.CLIENT_KEY
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
       return r.ok;
@@ -799,10 +789,7 @@ const API = {
           try {
             const r = await fetch(`${CFG.API_URL}/upload`, {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Client-Key': CFG.CLIENT_KEY
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ base64, fileName: file.name })
             });
             if (r.ok) {
