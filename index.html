@@ -1,0 +1,2622 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OOE - Информационный портал</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/*
+================================================================================
+  OOE — ИНФОРМАЦИОННЫЙ ПОРТАЛ
+  
+  НАСТРОЙКА (всего 2 параметра в начале <script>):
+  -----------------------------------------------
+  1. API_URL    — адрес вашего сервера на Vercel
+                  Например: 'https://ooe-portal.vercel.app/api'
+  2. CLIENT_KEY — должен совпадать с CLIENT_KEY на сервере
+                  (задаётся в переменных окружения Vercel)
+  
+  ВСЕ ОСТАЛЬНЫЕ КЛЮЧИ (JSON Bin, GitHub) хранятся ТОЛЬКО на сервере!
+  В HTML коде их НЕТ — это защищает вашу БД от кражи.
+  
+  ГДЕ МЕНЯТЬ ЛОГОТИП И КАРТИНКИ:
+  ------------------------------
+  - Логотип:      Админ-панель → Настройки → Логотип (URL или загрузить)
+  - Картинки Hero: Админ-панель → Настройки → Картинки Hero
+  - Обложка канала: Настройки канала → Загрузить обложку
+  - Аватар пользователя: Профиль → Редактировать → Аватар
+================================================================================
+*/
+
+:root {
+  --grad-main: linear-gradient(135deg, #0066ff 0%, #00d4ff 50%, #00a0dc 100%);
+  --grad-accent: linear-gradient(135deg, #1e3a8a, #3b82f6);
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 4px 20px rgba(0, 100, 255, 0.1);
+  --shadow-lg: 0 10px 40px rgba(0, 100, 255, 0.2);
+  --header-h: 68px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] {
+  --bg-primary: #0a0f1a;
+  --bg-secondary: #0f1829;
+  --bg-card: #161f33;
+  --bg-input: #1c2540;
+  --bg-hover: #253150;
+  --text-primary: #e8f0ff;
+  --text-secondary: #a8b8d8;
+  --text-muted: #6b7a9a;
+  --border: #253150;
+  --accent: #3b82f6;
+  --accent2: #06b6d4;
+  --online: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --verified: #00d4ff;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f0f7ff;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #e6f0ff;
+  --bg-hover: #cce0ff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border: #cbd5e1;
+  --accent: #2563eb;
+  --accent2: #0891b2;
+  --online: #10b981;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --verified: #0ea5e9;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  transition: var(--transition);
+  line-height: 1.6;
+}
+a { text-decoration: none; color: inherit; }
+img { max-width: 100%; display: block; }
+button { cursor: pointer; font-family: inherit; border: none; }
+input, textarea, select { font-family: inherit; }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: var(--header-h);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 24px;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+}
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 26px; font-weight: 900; letter-spacing: 2px;
+  background: var(--grad-main);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  cursor: pointer;
+}
+.logo img { height: 40px; border-radius: 8px; }
+.nav-links { display: flex; gap: 8px; margin-left: 40px; }
+.nav-link {
+  padding: 8px 18px; border-radius: 24px;
+  color: var(--text-secondary); font-weight: 600; font-size: 14px;
+  cursor: pointer; transition: var(--transition);
+}
+.nav-link:hover { background: var(--bg-hover); color: var(--text-primary); }
+.nav-link.active { background: var(--grad-main); color: #fff; }
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.icon-btn {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--bg-input); color: var(--text-primary);
+  display: flex; align-items: center; justify-content: center;
+  transition: var(--transition); font-size: 16px;
+}
+.icon-btn:hover { background: var(--accent); color: #fff; transform: translateY(-2px); }
+.user-menu {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 14px 4px 4px; border-radius: 30px;
+  background: var(--bg-input); cursor: pointer;
+  transition: var(--transition); border: 1px solid transparent;
+}
+.user-menu:hover { border-color: var(--accent); }
+.user-menu img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+.user-menu span { font-weight: 700; font-size: 14px; }
+.hamburger {
+  display: none; background: none; color: var(--text-primary);
+  font-size: 22px; padding: 8px;
+}
+
+/* ==================== HERO ==================== */
+.hero {
+  position: relative; min-height: 450px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-secondary);
+}
+.hero-slides { position: absolute; inset: 0; }
+.hero-slide {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  opacity: 0; transition: opacity 1.2s ease;
+}
+.hero-slide.active { opacity: 1; }
+.hero-slide::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(10,15,26,0.85), rgba(0,102,255,0.6));
+}
+.hero-content {
+  position: relative; z-index: 2;
+  text-align: center; padding: 80px 24px 60px; max-width: 800px;
+}
+.hero-logo { margin-bottom: 24px; }
+.hero-logo img {
+  height: 90px; margin: 0 auto;
+  filter: drop-shadow(0 4px 20px rgba(0,0,0,0.5));
+}
+.hero h1 {
+  font-size: 48px; font-weight: 900; color: #fff;
+  margin-bottom: 16px; line-height: 1.1;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+}
+.hero p { font-size: 18px; color: rgba(255,255,255,0.9); margin-bottom: 24px; }
+.hero-dots {
+  position: absolute; bottom: 20px; left: 50%;
+  transform: translateX(-50%); display: flex; gap: 8px; z-index: 3;
+}
+.hero-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: rgba(255,255,255,0.4); cursor: pointer;
+  transition: var(--transition);
+}
+.hero-dot.active { background: #fff; width: 30px; border-radius: 5px; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.main-wrapper { margin-top: var(--header-h); min-height: calc(100vh - var(--header-h)); }
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 24px; margin-bottom: 20px;
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+}
+.card:hover { box-shadow: var(--shadow-lg); }
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.card-title {
+  font-size: 18px; font-weight: 800;
+  display: flex; align-items: center; gap: 10px;
+}
+.card-title i { color: var(--accent); }
+
+.btn {
+  padding: 11px 22px; border-radius: 30px;
+  font-weight: 700; font-size: 14px;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: var(--transition);
+}
+.btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.btn:active { transform: translateY(0); }
+.btn-primary { background: var(--grad-main); color: #fff; }
+.btn-outline { background: transparent; border: 2px solid var(--accent); color: var(--accent); }
+.btn-outline:hover { background: var(--accent); color: #fff; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-success { background: var(--online); color: #fff; }
+.btn-warning { background: var(--warning); color: #fff; }
+.btn-sm { padding: 7px 14px; font-size: 13px; }
+.btn-icon { width: 38px; height: 38px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+.form-group { margin-bottom: 18px; }
+.form-group label {
+  display: block; margin-bottom: 8px; font-size: 14px;
+  font-weight: 600; color: var(--text-secondary);
+}
+.form-input {
+  width: 100%; padding: 12px 16px;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text-primary);
+  outline: none; transition: var(--transition); font-size: 15px;
+}
+.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+textarea.form-input { resize: vertical; min-height: 100px; }
+.file-upload {
+  border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 28px; text-align: center; cursor: pointer;
+  color: var(--text-muted); transition: var(--transition);
+}
+.file-upload:hover { border-color: var(--accent); color: var(--accent); background: var(--bg-input); }
+.file-upload i { font-size: 28px; margin-bottom: 8px; display: block; }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7);
+  z-index: 200; display: none; align-items: center; justify-content: center;
+  backdrop-filter: blur(6px);
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--bg-card); border-radius: var(--radius);
+  border: 1px solid var(--border); padding: 28px;
+  width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto;
+  box-shadow: var(--shadow-lg); animation: modalIn 0.3s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.9) translateY(-20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+.modal-header h2 {
+  font-size: 22px; font-weight: 800;
+  background: var(--grad-main);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.modal-close {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--bg-input); color: var(--text-primary);
+  display: flex; align-items: center; justify-content: center;
+  transition: var(--transition);
+}
+.modal-close:hover { background: var(--danger); color: #fff; }
+
+.auth-container {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #0a0f1a 0%, #1e3a8a 50%, #0891b2 100%);
+  padding: 20px; position: relative; overflow: hidden;
+}
+.auth-container::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.3), transparent 50%),
+              radial-gradient(circle at 70% 80%, rgba(6, 182, 212, 0.3), transparent 50%);
+}
+.auth-box {
+  position: relative;
+  background: var(--bg-card); border-radius: 20px;
+  border: 1px solid var(--border); padding: 40px;
+  width: 100%; max-width: 420px; box-shadow: var(--shadow-lg);
+}
+.auth-box h1 {
+  text-align: center; margin-bottom: 8px; font-size: 32px; font-weight: 900;
+  background: var(--grad-main);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.auth-box .subtitle { text-align: center; color: var(--text-muted); margin-bottom: 28px; }
+.auth-toggle { text-align: center; margin-top: 20px; color: var(--text-muted); font-size: 14px; }
+.auth-toggle a { color: var(--accent); font-weight: 700; cursor: pointer; }
+
+.news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
+.news-item {
+  background: var(--bg-card); border-radius: var(--radius);
+  overflow: hidden; border: 1px solid var(--border);
+  transition: var(--transition); position: relative;
+}
+.news-item:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--accent); }
+.news-img { width: 100%; height: 200px; object-fit: cover; background: var(--grad-accent); }
+.news-body { padding: 20px; }
+.news-category {
+  display: inline-block; padding: 4px 12px; border-radius: 20px;
+  background: var(--grad-main); color: #fff; font-size: 11px;
+  font-weight: 800; text-transform: uppercase; margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+.news-title { font-size: 18px; font-weight: 800; margin-bottom: 10px; line-height: 1.4; }
+.news-meta {
+  display: flex; gap: 16px; font-size: 13px;
+  color: var(--text-muted); margin-bottom: 12px; flex-wrap: wrap;
+}
+.news-excerpt { color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.news-evidence {
+  margin-top: 12px; padding: 10px; border-radius: var(--radius-sm);
+  background: var(--bg-input); border-left: 3px solid var(--accent);
+  font-size: 13px;
+}
+.news-evidence img { max-height: 150px; border-radius: 6px; margin-top: 8px; cursor: pointer; }
+.news-actions {
+  display: flex; gap: 12px; margin-top: 16px; padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.action-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: none; color: var(--text-muted);
+  padding: 6px 12px; border-radius: 20px;
+  font-size: 13px; font-weight: 600; transition: var(--transition);
+}
+.action-btn:hover { background: var(--bg-input); color: var(--accent); }
+.action-btn.liked { color: var(--danger); }
+
+.forum-post {
+  background: var(--bg-card); border-radius: var(--radius);
+  border: 1px solid var(--border); margin-bottom: 14px;
+  transition: var(--transition); display: flex; overflow: hidden;
+}
+.forum-post:hover { border-color: var(--accent); }
+.forum-votes {
+  width: 50px; padding: 14px 8px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 4px; background: var(--bg-input);
+}
+.vote-btn {
+  width: 32px; height: 32px; border-radius: 6px;
+  background: transparent; color: var(--text-muted);
+  font-size: 16px; transition: var(--transition);
+}
+.vote-btn:hover { background: var(--bg-hover); color: var(--accent); }
+.vote-btn.voted-up { color: var(--accent); background: rgba(59,130,246,0.15); }
+.vote-btn.voted-down { color: var(--danger); background: rgba(239,68,68,0.15); }
+.vote-count { font-weight: 800; font-size: 14px; }
+.forum-content { flex: 1; padding: 16px 20px; }
+.forum-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; flex-wrap: wrap; }
+.forum-author { font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.forum-author:hover { color: var(--accent); }
+.forum-time { color: var(--text-muted); }
+.forum-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; cursor: pointer; line-height: 1.3; }
+.forum-title:hover { color: var(--accent); }
+.forum-text { color: var(--text-secondary); margin-bottom: 14px; white-space: pre-wrap; word-break: break-word; }
+.forum-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.forum-action {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 20px;
+  background: transparent; color: var(--text-muted);
+  font-size: 13px; font-weight: 600; transition: var(--transition);
+}
+.forum-action:hover { background: var(--bg-hover); color: var(--text-primary); }
+.forum-comments { padding: 0 20px 20px 68px; }
+.comment { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+.comment-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.comment-body { flex: 1; }
+.comment-header { font-size: 13px; margin-bottom: 4px; }
+.comment-author { font-weight: 700; cursor: pointer; }
+.comment-author:hover { color: var(--accent); }
+.comment-time { color: var(--text-muted); margin-left: 8px; font-size: 12px; }
+.comment-text { font-size: 14px; color: var(--text-secondary); }
+.comment-actions { display: flex; gap: 10px; margin-top: 4px; }
+.comment-actions button {
+  background: none; color: var(--text-muted);
+  font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; gap: 4px;
+}
+.comment-actions button:hover { color: var(--accent); }
+.comment-actions button.liked { color: var(--danger); }
+
+.channel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.channel-card {
+  background: var(--bg-card); border-radius: var(--radius);
+  border: 1px solid var(--border); overflow: hidden;
+  transition: var(--transition); cursor: pointer;
+}
+.channel-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.channel-cover { height: 90px; background: var(--grad-main); background-size: cover; background-position: center; }
+.channel-body { padding: 16px; text-align: center; position: relative; }
+.channel-avatar {
+  width: 70px; height: 70px; border-radius: 50%; object-fit: cover;
+  border: 4px solid var(--bg-card); margin: -50px auto 12px;
+  background: var(--bg-input);
+}
+.channel-name { font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.channel-verified { color: var(--verified); font-size: 16px; }
+.channel-desc { font-size: 13px; color: var(--text-muted); margin: 8px 0; }
+
+.profile-header {
+  background: var(--bg-card); border-radius: var(--radius);
+  overflow: hidden; margin-bottom: 24px; border: 1px solid var(--border);
+}
+.profile-cover { height: 200px; background: var(--grad-main); background-size: cover; background-position: center; }
+.profile-info {
+  display: flex; gap: 20px; padding: 0 24px 24px;
+  margin-top: -50px; position: relative; flex-wrap: wrap;
+}
+.profile-avatar-wrap { position: relative; }
+.profile-avatar {
+  width: 120px; height: 120px; border-radius: 50%; object-fit: cover;
+  border: 4px solid var(--bg-card); background: var(--bg-input);
+}
+.online-dot { position: absolute; bottom: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--online); border: 3px solid var(--bg-card); }
+.offline-dot { position: absolute; bottom: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--text-muted); border: 3px solid var(--bg-card); }
+.profile-details { flex: 1; padding-top: 60px; min-width: 200px; }
+.profile-name { font-size: 26px; font-weight: 900; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.verified-badge { color: var(--verified); }
+.role-badge {
+  padding: 3px 10px; border-radius: 20px; font-size: 11px;
+  font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.role-badge.admin { background: rgba(239,68,68,0.2); color: var(--danger); }
+.role-badge.moder { background: rgba(245,158,11,0.2); color: var(--warning); }
+.role-badge.user { background: rgba(59,130,246,0.2); color: var(--accent); }
+.profile-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px; font-size: 13px;
+  background: var(--bg-input); color: var(--text-muted); margin-top: 8px;
+}
+.profile-status.online { color: var(--online); }
+.profile-stats { display: flex; gap: 24px; margin-top: 14px; flex-wrap: wrap; }
+.profile-stat { text-align: center; }
+.profile-stat-num { font-size: 20px; font-weight: 800; color: var(--accent); }
+.profile-stat-label { font-size: 12px; color: var(--text-muted); }
+.profile-actions { margin-left: auto; padding-top: 60px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+.admin-tabs {
+  display: flex; gap: 6px; background: var(--bg-card);
+  padding: 6px; border-radius: var(--radius); border: 1px solid var(--border);
+  margin-bottom: 24px; flex-wrap: wrap;
+}
+.admin-tab {
+  padding: 10px 18px; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-secondary);
+  font-weight: 700; transition: var(--transition); font-size: 14px;
+}
+.admin-tab:hover { background: var(--bg-hover); color: var(--text-primary); }
+.admin-tab.active { background: var(--grad-main); color: #fff; }
+.admin-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--bg-card); border-radius: var(--radius); overflow: hidden;
+}
+.admin-table th {
+  padding: 14px 16px; text-align: left; font-size: 12px;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-muted); background: var(--bg-input);
+  border-bottom: 2px solid var(--border);
+}
+.admin-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.admin-table tr:hover td { background: var(--bg-hover); }
+.status-pill { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.status-pill.online { background: rgba(16,185,129,0.2); color: var(--online); }
+.status-pill.offline { background: rgba(100,116,139,0.2); color: var(--text-muted); }
+.status-pill.banned { background: rgba(239,68,68,0.2); color: var(--danger); }
+.status-pill.muted { background: rgba(245,158,11,0.2); color: var(--warning); }
+.status-pill.pending { background: rgba(245,158,11,0.2); color: var(--warning); }
+
+.poll-option {
+  position: relative; padding: 14px 18px; margin-bottom: 10px;
+  border-radius: var(--radius-sm); border: 2px solid var(--border);
+  cursor: pointer; transition: var(--transition); overflow: hidden;
+}
+.poll-option:hover { border-color: var(--accent); }
+.poll-option.voted { border-color: var(--accent); cursor: default; }
+.poll-bar {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(59,130,246,0.2), transparent);
+  transition: width 0.6s ease;
+}
+.poll-content { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; }
+.poll-votes { font-weight: 800; color: var(--accent); }
+
+.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 500; display: flex; flex-direction: column; gap: 10px; }
+.toast {
+  padding: 14px 22px; border-radius: var(--radius-sm);
+  color: #fff; font-size: 14px; font-weight: 600;
+  display: flex; align-items: center; gap: 10px;
+  animation: toastIn 0.3s ease; min-width: 280px; box-shadow: var(--shadow-lg);
+}
+.toast.success { background: var(--online); }
+.toast.error { background: var(--danger); }
+.toast.warning { background: var(--warning); color: #000; }
+.toast.info { background: var(--accent); }
+@keyframes toastIn { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
+
+.footer { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 48px 24px 24px; margin-top: 60px; }
+.footer-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 32px; }
+.footer h4 {
+  margin-bottom: 14px; font-size: 16px; font-weight: 800;
+  background: var(--grad-main);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.footer p, .footer a { color: var(--text-muted); font-size: 14px; line-height: 1.8; }
+.footer a:hover { color: var(--accent); }
+.footer-bottom { max-width: 1200px; margin: 32px auto 0; padding-top: 24px; border-top: 1px solid var(--border); text-align: center; color: var(--text-muted); font-size: 13px; }
+
+.faq-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+.faq-q { padding: 18px 22px; cursor: pointer; font-weight: 700; display: flex; justify-content: space-between; align-items: center; transition: var(--transition); }
+.faq-q:hover { background: var(--bg-hover); }
+.faq-a { padding: 0 22px; max-height: 0; overflow: hidden; transition: all 0.3s ease; color: var(--text-secondary); }
+.faq-item.open .faq-a { max-height: 500px; padding: 0 22px 20px; }
+.faq-item.open .faq-q i { transform: rotate(180deg); }
+
+.section-title {
+  font-size: 28px; font-weight: 900; margin-bottom: 24px;
+  background: var(--grad-main);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.mobile-nav { position: fixed; inset: 0; z-index: 150; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); display: none; }
+.mobile-nav.active { display: block; }
+.mobile-nav-content { width: 280px; height: 100%; background: var(--bg-secondary); padding: 24px; overflow-y: auto; }
+.mobile-nav-close { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; border-radius: 50%; background: var(--danger); color: #fff; font-size: 18px; }
+.mobile-nav-item { padding: 14px 0; border-bottom: 1px solid var(--border); font-weight: 700; cursor: pointer; font-size: 15px; }
+.mobile-nav-item:hover { color: var(--accent); }
+
+.avatar-sm { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.avatar-md { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.text-center { text-align: center; }
+.text-muted { color: var(--text-muted); }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+.mb-16 { margin-bottom: 16px; }
+.mb-24 { margin-bottom: 24px; }
+.hidden { display: none !important; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+.empty-state i { font-size: 50px; margin-bottom: 14px; opacity: 0.4; display: block; }
+.img-preview { max-width: 100%; max-height: 180px; border-radius: var(--radius-sm); margin-top: 12px; }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+.badge-item { text-align: center; padding: 18px 12px; background: var(--bg-input); border-radius: var(--radius); border: 1px solid var(--border); transition: var(--transition); }
+.badge-item:hover { border-color: var(--accent); transform: translateY(-3px); }
+.badge-item.locked { opacity: 0.35; filter: grayscale(1); }
+.badge-icon { font-size: 36px; margin-bottom: 8px; }
+.badge-name { font-size: 12px; font-weight: 700; }
+
+@media (max-width: 900px) {
+  .nav-links { display: none; }
+  .hamburger { display: block; }
+  .hero h1 { font-size: 32px; }
+  .hero { min-height: 350px; }
+}
+@media (max-width: 600px) {
+  .news-grid, .channel-grid { grid-template-columns: 1fr; }
+  .forum-votes { width: 40px; padding: 8px 4px; }
+  .forum-comments { padding-left: 56px; }
+  .profile-info { flex-direction: column; align-items: center; text-align: center; }
+  .profile-details { padding-top: 16px; }
+  .profile-actions { margin-left: 0; padding-top: 12px; }
+  .profile-stats { justify-content: center; }
+}
+
+.loading-overlay {
+  position: fixed; inset: 0; background: rgba(10,15,26,0.8);
+  z-index: 1000; display: flex; align-items: center; justify-content: center;
+  color: #fff; flex-direction: column; gap: 16px;
+}
+.spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ==================== AUTH ==================== -->
+<div id="authScreen" class="auth-container">
+  <div class="auth-box">
+    <h1>OOE</h1>
+    <p class="subtitle">Информационный портал</p>
+    
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Логин</label>
+        <input type="text" class="form-input" id="loginUser" placeholder="Введите логин">
+      </div>
+      <div class="form-group">
+        <label>Пароль</label>
+        <input type="password" class="form-input" id="loginPass" placeholder="Введите пароль" onkeydown="if(event.key==='Enter')App.login()">
+      </div>
+      <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="App.login()">
+        <i class="fas fa-sign-in-alt"></i> Войти
+      </button>
+      <p class="auth-toggle">Нет аккаунта? <a onclick="App.showReg()">Регистрация</a></p>
+    </div>
+    
+    <div id="regForm" class="hidden">
+      <div class="form-group">
+        <label>Логин</label>
+        <input type="text" class="form-input" id="regUser" placeholder="Придумайте логин">
+      </div>
+      <div class="form-group">
+        <label>Телефон</label>
+        <input type="tel" class="form-input" id="regPhone" placeholder="+7...">
+      </div>
+      <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="App.register()">
+        <i class="fas fa-user-plus"></i> Создать аккаунт
+      </button>
+      <p class="auth-toggle">Есть аккаунт? <a onclick="App.showLog()">Войти</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== APP ==================== -->
+<div id="appScreen" class="hidden">
+  <header class="header">
+    <button class="hamburger" onclick="App.toggleMobile()"><i class="fas fa-bars"></i></button>
+    <div class="logo" onclick="App.go('home')">OOE</div>
+    <nav class="nav-links">
+      <span class="nav-link" data-page="home" onclick="App.go('home')">Главная</span>
+      <span class="nav-link" data-page="news" onclick="App.go('news')">Новости</span>
+      <span class="nav-link" data-page="forum" onclick="App.go('forum')">Форум</span>
+      <span class="nav-link" data-page="channels" onclick="App.go('channels')">Каналы</span>
+    </nav>
+    <div class="header-right">
+      <button class="icon-btn" onclick="App.toggleTheme()" title="Тема"><i id="themeIcon" class="fas fa-moon"></i></button>
+      <button class="user-menu" onclick="App.go('profile')">
+        <img id="headerAvatar" src="" alt="">
+        <span id="headerName"></span>
+      </button>
+    </div>
+  </header>
+  
+  <div class="mobile-nav" id="mobileNav">
+    <button class="mobile-nav-close" onclick="App.toggleMobile()"><i class="fas fa-times"></i></button>
+    <div class="mobile-nav-content">
+      <div class="mobile-nav-item" onclick="App.go('home');App.toggleMobile()"><i class="fas fa-home"></i> Главная</div>
+      <div class="mobile-nav-item" onclick="App.go('news');App.toggleMobile()"><i class="fas fa-newspaper"></i> Новости</div>
+      <div class="mobile-nav-item" onclick="App.go('forum');App.toggleMobile()"><i class="fas fa-comments"></i> Форум</div>
+      <div class="mobile-nav-item" onclick="App.go('channels');App.toggleMobile()"><i class="fas fa-tv"></i> Каналы</div>
+      <div class="mobile-nav-item" onclick="App.go('badges');App.toggleMobile()"><i class="fas fa-medal"></i> Достижения</div>
+      <div class="mobile-nav-item" onclick="App.go('profile');App.toggleMobile()"><i class="fas fa-user"></i> Профиль</div>
+      <div class="mobile-nav-item" id="mobileAdmin" style="display:none" onclick="App.go('admin');App.toggleMobile()"><i class="fas fa-shield-alt"></i> Админ</div>
+      <div class="mobile-nav-item" onclick="App.logout()"><i class="fas fa-sign-out-alt"></i> Выйти</div>
+    </div>
+  </div>
+  
+  <main class="main-wrapper" id="main"></main>
+  
+  <footer class="footer">
+    <div class="footer-grid">
+      <div>
+        <h4>О портале</h4>
+        <p>OOE — современный информационный портал с актуальными новостями и активным сообществом.</p>
+      </div>
+      <div>
+        <h4>Навигация</h4>
+        <p><a onclick="App.go('home')">Главная</a></p>
+        <p><a onclick="App.go('news')">Новости</a></p>
+        <p><a onclick="App.go('forum')">Форум</a></p>
+      </div>
+      <div>
+        <h4>Правила</h4>
+        <p>Соблюдайте уважение. Спам и нарушения ведут к бану.</p>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2024 OOE. Все права защищены.</div>
+  </footer>
+</div>
+
+<div class="modal-overlay" id="modal"><div class="modal" id="modalBody"></div></div>
+<div class="toast-container" id="toasts"></div>
+<input type="file" id="fileInput" accept="image/*" style="display:none">
+<input type="file" id="fileInput2" accept="image/*" style="display:none">
+
+<div id="loadingOverlay" class="loading-overlay hidden">
+  <div class="spinner"></div>
+  <div>Загрузка...</div>
+</div>
+
+<script>
+/* ====================================================================
+ *  КОНФИГУРАЦИЯ КЛИЕНТА
+ *  В HTML хранятся ТОЛЬКО:
+ *    - API_URL    → адрес сервера (где лежит вся остальная конфигурация)
+ *    - CLIENT_KEY → должен совпадать с CLIENT_KEY в env сервера
+ *  Все ключи (JSON Bin, GitHub) хранятся на сервере!
+ * ==================================================================== */
+const CFG = {
+  // ▼▼▼ ВСТАВЬТЕ URL ВАШЕГО СЕРВЕРА ПОСЛЕ ДЕПЛОЯ НА VERCEL ▼▼▼
+  // Например: 'https://ooe-portal.vercel.app/api'
+  API_URL: '',
+  // ▲▲▲ URL СЕРВЕРА ▲▲▲
+  
+  CLIENT_KEY: 'ooe_client_key_2024',
+  
+  DEF_AVATAR: 'https://api.dicebear.com/7.x/initials/svg?seed=',
+  MAX_SAME_MESSAGES: 5,
+  MUTE_DURATION: 3600
+};
+
+/* ====================================================================
+ *  ГДЕ ВСТАВИТЬ КАРТИНКИ:
+ *  ----------------------
+ *  1. ЛОГОТИП В ХЕДЕРЕ:
+ *     В HTML найдите строку:
+ *       <div class="logo" onclick="App.go('home')">OOE</div>
+ *     Замените на:
+ *       <div class="logo" onclick="App.go('home')">
+ *         <img src="URL_ВАШЕГО_ЛОГОТИПА" alt="OOE"> OOE
+ *       </div>
+ *     Или через Админ-панель → Настройки → Логотип
+ *  
+ *  2. КАРТИНКИ HERO (фон главной страницы):
+ *     Админ-панель → Настройки → "Картинки Hero" (по одной на строку)
+ *     Или в JSON Bin: settings.heroImages = ["url1", "url2", ...]
+ *  
+ *  3. ЛОГОТИП НАД ЗАГОЛОВКОМ HERO:
+ *     Админ-панель → Настройки → Логотип (URL)
+ *     Или в JSON Bin: settings.logoUrl = "https://..."
+ * ==================================================================== */
+
+// ==================== УТИЛИТЫ ====================
+const esc = s => { if(!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+const genId = () => Date.now().toString(36) + Math.random().toString(36).substr(2,9);
+const genPass = () => Math.random().toString(36).substr(2,6) + Math.random().toString(36).substr(2,4);
+const timeAgo = ts => {
+  const d = Date.now()/1000 - ts;
+  if(d < 60) return 'только что';
+  if(d < 3600) return Math.floor(d/60) + ' мин назад';
+  if(d < 86400) return Math.floor(d/3600) + ' ч назад';
+  if(d < 604800) return Math.floor(d/86400) + ' дн назад';
+  return new Date(ts*1000).toLocaleDateString('ru-RU');
+};
+
+// ==================== API LAYER ====================
+const API = {
+  async load() {
+    if (!CFG.API_URL) {
+      console.error('API_URL не настроен!');
+      return null;
+    }
+    try {
+      const r = await fetch(`${CFG.API_URL}/data`, {
+        headers: { 'X-Client-Key': CFG.CLIENT_KEY }
+      });
+      if (r.ok) return await r.json();
+      console.error('Load error:', r.status);
+      return null;
+    } catch (e) {
+      console.error('Load error:', e);
+      return null;
+    }
+  },
+
+  async save(data) {
+    if (!CFG.API_URL) {
+      console.error('API_URL не настроен!');
+      return false;
+    }
+    try {
+      const r = await fetch(`${CFG.API_URL}/data`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Client-Key': CFG.CLIENT_KEY
+        },
+        body: JSON.stringify(data)
+      });
+      return r.ok;
+    } catch (e) {
+      console.error('Save error:', e);
+      return false;
+    }
+  },
+
+  async uploadImage(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result;
+        
+        if (CFG.API_URL) {
+          try {
+            const r = await fetch(`${CFG.API_URL}/upload`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Client-Key': CFG.CLIENT_KEY
+              },
+              body: JSON.stringify({ base64, fileName: file.name })
+            });
+            if (r.ok) {
+              const result = await r.json();
+              if (result.url) return resolve(result.url);
+            }
+          } catch (e) {
+            console.error('Upload error:', e);
+          }
+        }
+        // Fallback — base64 (если сервер не настроен или GitHub не настроен)
+        resolve(base64);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+};
+
+// ==================== APP ====================
+const App = {
+  data: null,
+  user: null,
+  page: 'home',
+  heroSlide: 0,
+  heroInterval: null,
+  pendingFile: null,
+  pendingFile2: null,
+  recentMessages: [],
+  isSaving: false,
+
+  async load() {
+    const fresh = await API.load();
+    if (fresh) {
+      this.data = fresh;
+      try { localStorage.setItem('ooe_data', JSON.stringify(this.data)); } catch(e) {}
+    } else {
+      const cached = localStorage.getItem('ooe_data');
+      if (cached) {
+        try { this.data = JSON.parse(cached); } catch(e) {}
+      }
+    }
+    if (!this.data) this.data = this.defaultData();
+  },
+
+  async save() {
+    if (this.isSaving) return false;
+    this.isSaving = true;
+    try {
+      try { localStorage.setItem('ooe_data', JSON.stringify(this.data)); } catch(e) {}
+      const ok = await API.save(this.data);
+      if (!ok) {
+        this.toast('Ошибка сохранения, проверьте соединение', 'error');
+        return false;
+      }
+      // Перезагружаем данные с сервера, чтобы убедиться что всё синхронизировано
+      await this.load();
+      // Обновляем ссылку на user после перезагрузки
+      if (this.user) {
+        const u = this.data.users.find(x => x.id === this.user.id);
+        if (u) this.user = u;
+      }
+      return true;
+    } finally {
+      this.isSaving = false;
+    }
+  },
+
+  defaultData() {
+    return {
+      users: [],
+      channels: [],
+      news: [],
+      polls: [],
+      forumPosts: [],
+      badges: [
+        {id:'badge1',name:'Первопроходец',icon:'🌟',desc:'Зарегистрировался на портале'},
+        {id:'badge2',name:'Форумчанин',icon:'💬',desc:'Создал тему на форуме'},
+        {id:'badge3',name:'Голосующий',icon:'🗳️',desc:'Участвовал в голосовании'},
+        {id:'badge4',name:'Автор',icon:'✍️',desc:'Предложил новость'},
+        {id:'badge5',name:'Вещатель',icon:'📺',desc:'Создал канал'},
+        {id:'badge6',name:'Верифицирован',icon:'✅',desc:'Канал верифицирован'},
+        {id:'badge7',name:'Активист',icon:'🔥',desc:'10+ постов на форуме'},
+        {id:'badge8',name:'Популярный',icon:'⭐',desc:'50+ лайков'}
+      ],
+      settings: {
+        mainPageMode: 'info',
+        logoUrl: '',
+        heroImages: [
+          'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1600',
+          'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1600',
+          'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=1600'
+        ],
+        heroTitle: 'Информационный портал OOE',
+        heroSubtitle: 'Актуальные новости, форум, каналы',
+        aboutText: 'OOE — современный информационный портал с новостями, форумом и каналами.',
+        rules: '1. Уважайте других пользователей\n2. Запрещён спам и флуд\n3. За 5 одинаковых сообщений — мут 1 час\n4. Администрация вправе удалить любой контент'
+      }
+    };
+  },
+
+  // --- AUTH ---
+  async login() {
+    const u = document.getElementById('loginUser').value.trim();
+    const p = document.getElementById('loginPass').value;
+    if (!u || !p) return this.toast('Заполните все поля', 'error');
+    
+    this.showLoading();
+    await this.load();
+    this.hideLoading();
+    
+    const user = this.data.users.find(x =>
+      x.username.toLowerCase() === u.toLowerCase() && x.password === p
+    );
+    
+    if (!user) return this.toast('Неверный логин или пароль', 'error');
+    if (user.isBanned) return this.toast('Ваш аккаунт заблокирован', 'error');
+    if (user.mutedUntil > Date.now()/1000) {
+      this.toast(`Замучены до ${new Date(user.mutedUntil*1000).toLocaleString('ru-RU')}`, 'warning');
+    }
+    
+    user.status = 'online';
+    user.lastSeen = Date.now()/1000;
+    this.user = user;
+    localStorage.setItem('ooe_uid', user.id);
+    await this.save();
+    this.toast('Добро пожаловать!', 'success');
+    this.showApp();
+  },
+
+  async register() {
+    const u = document.getElementById('regUser').value.trim();
+    const ph = document.getElementById('regPhone').value.trim();
+    if (!u) return this.toast('Введите логин', 'error');
+    if (u.length < 3) return this.toast('Логин минимум 3 символа', 'error');
+    if (ph.length < 5) return this.toast('Введите корректный телефон', 'error');
+    
+    this.showLoading();
+    await this.load();
+    this.hideLoading();
+    
+    if (this.data.users.find(x => x.username.toLowerCase() === u.toLowerCase())) {
+      return this.toast('Логин занят', 'error');
+    }
+    
+    const pass = genPass();
+    
+    // ВАЖНО: Первый пользователь НЕ становится админом автоматически!
+    // Администратор создаётся вручную в JSON Bin:
+    //   users[0].role = "admin"
+    //   или через админ-панель (если уже есть админ)
+    
+    const user = {
+      id: genId(),
+      username: u,
+      password: pass,
+      phone: ph,
+      avatar: CFG.DEF_AVATAR + encodeURIComponent(u),
+      cover: '',
+      status: 'online',
+      statusText: 'Новичок',
+      role: 'user',  // ВСЕГДА 'user' — админа назначают через JSON Bin или админ-панель
+      isBanned: 0,
+      mutedUntil: 0,
+      badges: ['badge1'],
+      channelId: null,
+      subscribers: [],
+      subscriptions: [],
+      likedPosts: [],
+      likedNews: [],
+      joinedAt: Date.now()/1000,
+      lastSeen: Date.now()/1000
+    };
+    
+    this.data.users.push(user);
+    this.user = user;
+    localStorage.setItem('ooe_uid', user.id);
+    
+    const saved = await this.save();
+    if (!saved) {
+      this.toast('Ошибка регистрации, попробуйте снова', 'error');
+      this.data.users.pop();
+      return;
+    }
+    
+    alert(`✅ Регистрация успешна!\n\n🔑 Ваш пароль: ${pass}\n\n⚠️ Сохраните его! Он больше не будет показан.`);
+    this.toast('Добро пожаловать в OOE!', 'success');
+    this.showApp();
+  },
+
+  logout() {
+    if (this.user) {
+      this.user.status = 'offline';
+      this.user.lastSeen = Date.now()/1000;
+      this.save();
+    }
+    this.user = null;
+    localStorage.removeItem('ooe_uid');
+    document.getElementById('appScreen').classList.add('hidden');
+    document.getElementById('authScreen').classList.remove('hidden');
+  },
+
+  showLog() { document.getElementById('loginForm').classList.remove('hidden'); document.getElementById('regForm').classList.add('hidden'); },
+  showReg() { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('regForm').classList.remove('hidden'); },
+
+  async init() {
+    if (!CFG.API_URL) {
+      document.body.innerHTML = `
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0f1a;color:#fff;font-family:sans-serif;text-align:center;padding:20px;">
+          <div>
+            <h1 style="color:#3b82f6;">OOE Portal</h1>
+            <p style="margin-top:20px;">⚠️ <b>API_URL не настроен!</b></p>
+            <p style="margin-top:10px;color:#94a3b8;">Откройте index.html и укажите адрес вашего сервера в CFG.API_URL<br>
+            После деплоя на Vercel вставьте ваш URL.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+    
+    await this.load();
+    const uid = localStorage.getItem('ooe_uid');
+    if (uid && this.data) {
+      const u = this.data.users.find(x => x.id === uid);
+      if (u && !u.isBanned) {
+        this.user = u;
+        u.status = 'online';
+        u.lastSeen = Date.now()/1000;
+        this.save();
+        this.showApp();
+        return;
+      }
+    }
+    document.getElementById('authScreen').classList.remove('hidden');
+  },
+
+  showApp() {
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('appScreen').classList.remove('hidden');
+    this.updateHeader();
+    this.go('home');
+  },
+
+  updateHeader() {
+    if (!this.user) return;
+    document.getElementById('headerAvatar').src = this.user.avatar || CFG.DEF_AVATAR + encodeURIComponent(this.user.username);
+    document.getElementById('headerName').textContent = this.user.username;
+    const role = this.user.role || 'user';
+    document.getElementById('mobileAdmin').style.display = (role === 'admin' || role === 'moder') ? 'block' : 'none';
+  },
+
+  showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); },
+  hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); },
+
+  go(page, param) {
+    this.page = page;
+    if (this.heroInterval) { clearInterval(this.heroInterval); this.heroInterval = null; }
+    document.querySelectorAll('.nav-link').forEach(b => b.classList.toggle('active', b.dataset.page === page));
+    if (page.includes('/')) { [page, param] = page.split('/'); }
+    const m = document.getElementById('main');
+    switch (page) {
+      case 'home': this.renderHome(m); break;
+      case 'news': this.renderNews(m); break;
+      case 'forum': this.renderForum(m); break;
+      case 'forumpost': this.renderForumPost(m, param); break;
+      case 'channels': this.renderChannels(m); break;
+      case 'channel': this.renderChannel(m, param); break;
+      case 'profile': this.renderProfile(m, param); break;
+      case 'badges': this.renderBadges(m); break;
+      case 'admin': this.renderAdmin(m); break;
+      default: this.renderHome(m);
+    }
+    window.scrollTo(0, 0);
+  },
+
+  // --- HOME ---
+  renderHome(c) {
+    const s = this.data.settings;
+    const imgs = s.heroImages || [];
+    const mode = s.mainPageMode || 'info';
+    const logo = s.logoUrl;
+    
+    const latestNews = this.data.news.filter(n => n.status === 'approved')
+      .sort((a,b) => b.timestamp - a.timestamp).slice(0,2);
+    
+    let featured = '';
+    if (mode === 'poll') {
+      const poll = this.data.polls.find(p => p.status === 'active');
+      if (poll) featured = this.renderPollCard(poll);
+      else featured = '<div class="card"><div class="empty-state"><i class="fas fa-poll"></i><p>Нет активных голосований</p></div></div>';
+    } else if (mode === 'news' && latestNews[0]) {
+      const n = latestNews[0];
+      featured = `
+        <div class="card">
+          <div class="card-header"><span class="card-title"><i class="fas fa-fire"></i> Главная новость</span></div>
+          ${n.image ? `<img src="${esc(n.image)}" style="width:100%;max-height:320px;object-fit:cover;border-radius:var(--radius);margin-bottom:16px;" onerror="this.style.display='none'">` : ''}
+          <h2 style="margin-bottom:10px;">${esc(n.title)}</h2>
+          <p class="text-muted mb-16" style="font-size:13px;"><i class="fas fa-clock"></i> ${timeAgo(n.timestamp)}</p>
+          <p style="color:var(--text-secondary);line-height:1.8;white-space:pre-wrap;">${esc(n.content)}</p>
+        </div>
+      `;
+    } else {
+      featured = `
+        <div class="card">
+          <div class="card-header"><span class="card-title"><i class="fas fa-info-circle"></i> О портале</span></div>
+          <p style="color:var(--text-secondary);line-height:1.8;white-space:pre-wrap;">${esc(s.aboutText || 'Добро пожаловать!')}</p>
+        </div>
+      `;
+    }
+
+    c.innerHTML = `
+      <div class="hero">
+        <div class="hero-slides" id="heroSlides">
+          ${imgs.map((img,i) => `<div class="hero-slide ${i===0?'active':''}" style="background-image:url('${esc(img)}')"></div>`).join('')}
+        </div>
+        <div class="hero-content">
+          ${logo ? `<div class="hero-logo"><img src="${esc(logo)}" alt="OOE" onerror="this.style.display='none'"></div>` : ''}
+          <h1>${esc(s.heroTitle || 'OOE')}</h1>
+          <p>${esc(s.heroSubtitle || 'Информационный портал')}</p>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+            <button class="btn btn-primary" style="background:#fff;color:var(--accent);" onclick="App.go('news')">
+              <i class="fas fa-newspaper"></i> Новости
+            </button>
+            <button class="btn btn-outline" style="border-color:#fff;color:#fff;" onclick="App.go('forum')">
+              <i class="fas fa-comments"></i> Форум
+            </button>
+          </div>
+        </div>
+        <div class="hero-dots" id="heroDots">
+          ${imgs.map((_,i) => `<div class="hero-dot ${i===0?'active':''}" onclick="App.setHeroSlide(${i})"></div>`).join('')}
+        </div>
+      </div>
+      
+      <div class="container">
+        ${featured}
+        
+        <section style="padding:40px 0;">
+          <h2 class="section-title">Последние новости</h2>
+          ${latestNews.length === 0 ? `
+            <div class="empty-state"><i class="fas fa-newspaper"></i><p>Новостей пока нет</p></div>
+          ` : `
+            <div class="news-grid">
+              ${latestNews.map(n => this.newsCard(n)).join('')}
+            </div>
+          `}
+          ${latestNews.length > 0 ? `
+            <div class="text-center mt-24">
+              <button class="btn btn-outline" onclick="App.go('news')">Все новости <i class="fas fa-arrow-right"></i></button>
+            </div>
+          ` : ''}
+        </section>
+        
+        <section style="padding:40px 0;">
+          <h2 class="section-title">Частые вопросы</h2>
+          <div class="faq-item">
+            <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+              Как предложить новость? <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="faq-a">Создайте канал, получите верификацию, и вы сможете предлагать новости через свой канал.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+              Как получить верификацию? <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="faq-a">Создайте канал и запросите верификацию в его настройках. Администратор рассмотрит заявку.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+              Что такое мут? <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="faq-a">За 5 одинаковых сообщений подряд вы получите автоматический мут на 1 час.</div>
+          </div>
+        </section>
+        
+        <section style="padding:40px 0;">
+          <h2 class="section-title">Правила</h2>
+          <div class="card">
+            <pre style="white-space:pre-wrap;font-family:inherit;color:var(--text-secondary);line-height:1.8;">${esc(s.rules || '')}</pre>
+          </div>
+        </section>
+      </div>
+    `;
+    
+    if (imgs.length > 1) {
+      this.heroInterval = setInterval(() => {
+        this.setHeroSlide((this.heroSlide + 1) % imgs.length);
+      }, 5000);
+    }
+  },
+
+  setHeroSlide(idx) {
+    const slides = document.querySelectorAll('.hero-slide');
+    const dots = document.querySelectorAll('.hero-dot');
+    if (slides[this.heroSlide]) slides[this.heroSlide].classList.remove('active');
+    if (dots[this.heroSlide]) dots[this.heroSlide].classList.remove('active');
+    this.heroSlide = idx;
+    if (slides[idx]) slides[idx].classList.add('active');
+    if (dots[idx]) dots[idx].classList.add('active');
+  },
+
+  renderPollCard(poll) {
+    const total = poll.options.reduce((s,o) => s + (o.votes||0), 0);
+    const voted = poll.votedUsers?.includes(this.user.id);
+    return `
+      <div class="card">
+        <div class="card-header"><span class="card-title"><i class="fas fa-poll"></i> Активное голосование</span></div>
+        <h3 style="margin-bottom:18px;">${esc(poll.question)}</h3>
+        <p class="text-muted mb-16" style="font-size:13px;">Всего голосов: ${total}</p>
+        ${poll.options.map((o,i) => {
+          const pct = total > 0 ? Math.round(o.votes/total*100) : 0;
+          return `
+            <div class="poll-option ${voted?'voted':''}" onclick="${!voted?`App.vote('${poll.id}',${i})`:''}">
+              <div class="poll-bar" style="width:${voted?pct:0}%"></div>
+              <div class="poll-content">
+                <span>${esc(o.text)}</span>
+                ${voted ? `<span class="poll-votes">${pct}%</span>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+        ${voted ? '<p style="color:var(--online);font-size:14px;margin-top:14px;"><i class="fas fa-check-circle"></i> Вы проголосовали</p>' : ''}
+      </div>
+    `;
+  },
+
+  async vote(pollId, idx) {
+    const poll = this.data.polls.find(p => p.id === pollId);
+    if (!poll || poll.status !== 'active') return;
+    if (!poll.votedUsers) poll.votedUsers = [];
+    if (poll.votedUsers.includes(this.user.id)) return this.toast('Вы уже голосовали', 'warning');
+    
+    poll.options[idx].votes = (poll.options[idx].votes||0) + 1;
+    poll.votedUsers.push(this.user.id);
+    
+    if (!(this.user.badges||[]).includes('badge3')) this.user.badges.push('badge3');
+    
+    await this.save();
+    this.toast('Голос учтён!', 'success');
+    this.go('home');
+  },
+
+  // --- NEWS ---
+  newsCard(n) {
+    let author = 'Администрация';
+    let verified = false;
+    if (n.authorType === 'channel') {
+      const ch = this.data.channels.find(c => c.id === n.authorId);
+      if (ch) { author = ch.name; verified = ch.verified; }
+    } else if (n.authorType === 'user') {
+      const u = this.data.users.find(x => x.id === n.authorId);
+      if (u) author = u.username;
+    }
+    const likes = n.likes || [];
+    const isLiked = likes.includes(this.user?.id);
+    
+    return `
+      <article class="news-item">
+        ${n.image ? `<img class="news-img" src="${esc(n.image)}" onerror="this.style.display='none'">` : ''}
+        <div class="news-body">
+          <span class="news-category">Новости</span>
+          <h3 class="news-title">${esc(n.title)}</h3>
+          <div class="news-meta">
+            <span><i class="fas fa-user"></i> ${esc(author)} ${verified?'<i class="fas fa-check-circle verified-badge"></i>':''}</span>
+            <span><i class="fas fa-clock"></i> ${timeAgo(n.timestamp)}</span>
+          </div>
+          <p class="news-excerpt">${esc(n.content).substring(0,180)}${n.content.length > 180 ? '...' : ''}</p>
+          ${n.evidenceImage ? `
+            <div class="news-evidence">
+              <strong><i class="fas fa-check-double"></i> Источник/доказательство:</strong>
+              <img src="${esc(n.evidenceImage)}" onclick="window.open(this.src,'_blank')" onerror="this.style.display='none'">
+            </div>
+          ` : ''}
+          <div class="news-actions">
+            <button class="action-btn ${isLiked?'liked':''}" onclick="App.likeNews('${n.id}')">
+              <i class="fas fa-heart"></i> ${likes.length}
+            </button>
+            <button class="action-btn" onclick="App.shareNews('${n.id}')">
+              <i class="fas fa-share"></i> Поделиться
+            </button>
+          </div>
+        </div>
+      </article>
+    `;
+  },
+
+  async likeNews(newsId) {
+    const n = this.data.news.find(x => x.id === newsId);
+    if (!n) return;
+    if (!n.likes) n.likes = [];
+    const idx = n.likes.indexOf(this.user.id);
+    if (idx >= 0) n.likes.splice(idx, 1);
+    else n.likes.push(this.user.id);
+    
+    if (!this.user.likedNews) this.user.likedNews = [];
+    const uidx = this.user.likedNews.indexOf(newsId);
+    if (uidx >= 0) this.user.likedNews.splice(uidx, 1);
+    else this.user.likedNews.push(newsId);
+    
+    await this.save();
+    this.go(this.page);
+  },
+
+  shareNews() {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      this.toast('Ссылка скопирована!', 'success');
+    }
+  },
+
+  renderNews(c) {
+    const news = this.data.news.filter(n => n.status === 'approved').sort((a,b) => b.timestamp - a.timestamp);
+    const userChannel = this.data.channels.find(ch => ch.ownerId === this.user.id);
+    const canSuggest = userChannel && userChannel.verified;
+    
+    c.innerHTML = `
+      <div class="container" style="padding-top:32px;">
+        <div class="flex-between mb-24" style="flex-wrap:wrap;gap:16px;">
+          <h1 class="section-title" style="margin:0;">Новости</h1>
+          ${canSuggest ? `<button class="btn btn-primary" onclick="App.modal('suggestNews')"><i class="fas fa-plus"></i> Предложить новость</button>` : ''}
+        </div>
+        ${!canSuggest ? `
+          <div class="card mb-24" style="text-align:center; padding:20px;">
+            <p class="text-muted"><i class="fas fa-info-circle"></i> Чтобы предлагать новости, создайте канал и получите верификацию</p>
+          </div>
+        ` : ''}
+        ${news.length === 0 ? `
+          <div class="empty-state"><i class="fas fa-newspaper"></i><p>Новостей пока нет</p></div>
+        ` : `<div class="news-grid">${news.map(n => this.newsCard(n)).join('')}</div>`}
+      </div>
+    `;
+  },
+
+  // --- FORUM ---
+  renderForum(c) {
+    const posts = this.data.forumPosts.sort((a,b) => b.timestamp - a.timestamp);
+    const isMuted = this.user.mutedUntil > Date.now()/1000;
+    
+    c.innerHTML = `
+      <div class="container" style="padding-top:32px;">
+        <div class="flex-between mb-24" style="flex-wrap:wrap;gap:16px;">
+          <h1 class="section-title" style="margin:0;">Форум</h1>
+          ${!isMuted ? `<button class="btn btn-primary" onclick="App.modal('newPost')"><i class="fas fa-plus"></i> Создать тему</button>` : `<span class="status-pill muted">Замучены до ${new Date(this.user.mutedUntil*1000).toLocaleString('ru-RU')}</span>`}
+        </div>
+        ${posts.length === 0 ? `
+          <div class="empty-state"><i class="fas fa-comments"></i><p>Форум пуст</p></div>
+        ` : posts.map(p => this.forumCard(p)).join('')}
+      </div>
+    `;
+  },
+
+  forumCard(p) {
+    const author = this.data.users.find(u => u.id === p.authorId);
+    const likes = p.likes || [];
+    const dislikes = p.dislikes || [];
+    const userVote = this.user.likedPosts?.find(x => x.id === p.id)?.vote;
+    const score = likes.length - dislikes.length;
+    const comments = p.comments || [];
+    
+    return `
+      <div class="forum-post">
+        <div class="forum-votes">
+          <button class="vote-btn ${userVote==='up'?'voted-up':''}" onclick="App.votePost('${p.id}','up')"><i class="fas fa-arrow-up"></i></button>
+          <span class="vote-count" style="color:${score>0?'var(--online)':score<0?'var(--danger)':'var(--text-muted)'}">${score}</span>
+          <button class="vote-btn ${userVote==='down'?'voted-down':''}" onclick="App.votePost('${p.id}','down')"><i class="fas fa-arrow-down"></i></button>
+        </div>
+        <div class="forum-content">
+          <div class="forum-header">
+            <img class="avatar-sm" src="${esc(author?.avatar || CFG.DEF_AVATAR + 'u')}" onerror="this.src='${CFG.DEF_AVATAR}u'">
+            <span class="forum-author" onclick="App.go('profile/${p.authorId}')">${esc(author?.username || '?')} ${author?.role==='admin'?'<span class="role-badge admin">ADMIN</span>':author?.role==='moder'?'<span class="role-badge moder">MOD</span>':''}</span>
+            <span class="forum-time">• ${timeAgo(p.timestamp)}</span>
+          </div>
+          <h3 class="forum-title" onclick="App.go('forumpost/${p.id}')">${esc(p.title)}</h3>
+          <p class="forum-text">${esc(p.content).substring(0,300)}${p.content.length > 300 ? '...' : ''}</p>
+          <div class="forum-actions">
+            <button class="forum-action" onclick="App.go('forumpost/${p.id}')">
+              <i class="fas fa-comment"></i> ${comments.length} ответов
+            </button>
+            <button class="forum-action" onclick="App.shareNews()">
+              <i class="fas fa-share"></i> Поделиться
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  async votePost(postId, dir) {
+    const p = this.data.forumPosts.find(x => x.id === postId);
+    if (!p) return;
+    if (!p.likes) p.likes = [];
+    if (!p.dislikes) p.dislikes = [];
+    if (!this.user.likedPosts) this.user.likedPosts = [];
+    
+    const existing = this.user.likedPosts.find(x => x.id === postId);
+    
+    if (existing) {
+      if (existing.vote === 'up') p.likes = p.likes.filter(id => id !== this.user.id);
+      if (existing.vote === 'down') p.dislikes = p.dislikes.filter(id => id !== this.user.id);
+      if (existing.vote === dir) {
+        this.user.likedPosts = this.user.likedPosts.filter(x => x.id !== postId);
+      } else {
+        existing.vote = dir;
+        if (dir === 'up') p.likes.push(this.user.id);
+        else p.dislikes.push(this.user.id);
+      }
+    } else {
+      this.user.likedPosts.push({id: postId, vote: dir});
+      if (dir === 'up') p.likes.push(this.user.id);
+      else p.dislikes.push(this.user.id);
+    }
+    
+    await this.save();
+    this.go(this.page, this.page.includes('/') ? this.page.split('/')[1] : null);
+  },
+
+  renderForumPost(c, id) {
+    const p = this.data.forumPosts.find(x => x.id === id);
+    if (!p) return c.innerHTML = '<div class="container"><div class="empty-state"><i class="fas fa-comment-slash"></i><p>Тема не найдена</p></div></div>';
+    
+    const author = this.data.users.find(u => u.id === p.authorId);
+    const likes = p.likes || [];
+    const dislikes = p.dislikes || [];
+    const userVote = this.user.likedPosts?.find(x => x.id === p.id)?.vote;
+    const score = likes.length - dislikes.length;
+    const comments = p.comments || [];
+    const isMuted = this.user.mutedUntil > Date.now()/1000;
+    
+    c.innerHTML = `
+      <div class="container" style="padding-top:32px;">
+        <button class="btn btn-outline btn-sm mb-24" onclick="App.go('forum')">
+          <i class="fas fa-arrow-left"></i> Назад к форуму
+        </button>
+        
+        <div class="forum-post">
+          <div class="forum-votes">
+            <button class="vote-btn ${userVote==='up'?'voted-up':''}" onclick="App.votePost('${p.id}','up')"><i class="fas fa-arrow-up"></i></button>
+            <span class="vote-count" style="color:${score>0?'var(--online)':score<0?'var(--danger)':'var(--text-muted)'}">${score}</span>
+            <button class="vote-btn ${userVote==='down'?'voted-down':''}" onclick="App.votePost('${p.id}','down')"><i class="fas fa-arrow-down"></i></button>
+          </div>
+          <div class="forum-content">
+            <div class="forum-header">
+              <img class="avatar-sm" src="${esc(author?.avatar || CFG.DEF_AVATAR + 'u')}">
+              <span class="forum-author" onclick="App.go('profile/${p.authorId}')">${esc(author?.username || '?')}</span>
+              <span class="forum-time">• ${timeAgo(p.timestamp)}</span>
+            </div>
+            <h2 style="margin-bottom:16px;font-size:24px;">${esc(p.title)}</h2>
+            <p style="color:var(--text-secondary);line-height:1.8;white-space:pre-wrap;">${esc(p.content)}</p>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><i class="fas fa-comments"></i> Комментарии (${comments.length})</span>
+          </div>
+          
+          ${comments.map(cm => {
+            const cmA = this.data.users.find(u => u.id === cm.userId);
+            const cmLikes = cm.likes || [];
+            const cmLiked = cmLikes.includes(this.user.id);
+            return `
+              <div class="comment">
+                <img class="comment-avatar" src="${esc(cmA?.avatar || CFG.DEF_AVATAR + 'u')}" onerror="this.src='${CFG.DEF_AVATAR}u'">
+                <div class="comment-body">
+                  <div class="comment-header">
+                    <span class="comment-author" onclick="App.go('profile/${cm.userId}')">${esc(cmA?.username || '?')}</span>
+                    ${cmA?.role==='admin'?'<span class="role-badge admin" style="font-size:9px;padding:2px 6px;">ADMIN</span>':cmA?.role==='moder'?'<span class="role-badge moder" style="font-size:9px;padding:2px 6px;">MOD</span>':''}
+                    <span class="comment-time">${timeAgo(cm.timestamp)}</span>
+                  </div>
+                  <p class="comment-text">${esc(cm.text)}</p>
+                  <div class="comment-actions">
+                    <button class="${cmLiked?'liked':''}" onclick="App.likeComment('${p.id}','${cm.id}')">
+                      <i class="fas fa-heart"></i> ${cmLikes.length}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+          
+          ${!isMuted ? `
+            <div style="display:flex;gap:10px;margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+              <img class="avatar-md" src="${esc(this.user.avatar || CFG.DEF_AVATAR + encodeURIComponent(this.user.username))}" onerror="this.src='${CFG.DEF_AVATAR}u'">
+              <div style="flex:1;">
+                <textarea class="form-input" id="commentInput" placeholder="Написать комментарий..." style="min-height:60px;"></textarea>
+                <button class="btn btn-primary btn-sm mt-16" onclick="App.addComment('${p.id}')">
+                  <i class="fas fa-paper-plane"></i> Отправить
+                </button>
+              </div>
+            </div>
+          ` : `<p class="text-muted text-center" style="padding:20px;"><i class="fas fa-volume-mute"></i> Вы замучены</p>`}
+        </div>
+      </div>
+    `;
+  },
+
+  async likeComment(postId, commentId) {
+    const p = this.data.forumPosts.find(x => x.id === postId);
+    if (!p) return;
+    const c = p.comments.find(x => x.id === commentId);
+    if (!c) return;
+    if (!c.likes) c.likes = [];
+    const idx = c.likes.indexOf(this.user.id);
+    if (idx >= 0) c.likes.splice(idx, 1);
+    else c.likes.push(this.user.id);
+    await this.save();
+    this.go('forumpost/' + postId);
+  },
+
+  checkSpam(text, postId) {
+    const now = Date.now()/1000;
+    const same = this.recentMessages.filter(m =>
+      m.userId === this.user.id && m.postId === postId && m.text === text && now - m.time < 3600
+    );
+    if (same.length >= CFG.MAX_SAME_MESSAGES - 1) return true;
+    this.recentMessages.push({userId: this.user.id, postId, text, time: now});
+    this.recentMessages = this.recentMessages.filter(m => now - m.time < 3600);
+    return false;
+  },
+
+  async addComment(postId) {
+    const input = document.getElementById('commentInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    if (text.length > 2000) return this.toast('Комментарий слишком длинный', 'error');
+    
+    if (this.checkSpam(text, postId)) {
+      this.user.mutedUntil = Date.now()/1000 + CFG.MUTE_DURATION;
+      await this.save();
+      this.toast('🚫 Спам! Мут на 1 час', 'error');
+      this.go('forumpost/' + postId);
+      return;
+    }
+    
+    const p = this.data.forumPosts.find(x => x.id === postId);
+    if (!p) return;
+    if (!p.comments) p.comments = [];
+    
+    p.comments.push({
+      id: genId(),
+      userId: this.user.id,
+      text,
+      likes: [],
+      timestamp: Date.now()/1000
+    });
+    
+    const saved = await this.save();
+    if (saved) {
+      this.toast('Комментарий добавлен', 'success');
+      this.go('forumpost/' + postId);
+    } else {
+      // откат
+      p.comments.pop();
+    }
+  },
+
+  // --- CHANNELS ---
+  renderChannels(c) {
+    const channels = this.data.channels;
+    const hasChannel = channels.some(ch => ch.ownerId === this.user.id);
+    
+    c.innerHTML = `
+      <div class="container" style="padding-top:32px;">
+        <div class="flex-between mb-24" style="flex-wrap:wrap;gap:16px;">
+          <h1 class="section-title" style="margin:0;">Каналы</h1>
+          ${!hasChannel ? `<button class="btn btn-primary" onclick="App.modal('newChannel')"><i class="fas fa-plus"></i> Создать канал</button>` : ''}
+        </div>
+        ${channels.length === 0 ? `
+          <div class="empty-state"><i class="fas fa-tv"></i><p>Каналов пока нет</p></div>
+        ` : `
+          <div class="channel-grid">
+            ${channels.map(ch => {
+              const isSub = (ch.subscribers||[]).includes(this.user.id);
+              return `
+                <div class="channel-card" onclick="App.go('channel/${ch.id}')">
+                  <div class="channel-cover" ${ch.cover?`style="background-image:url('${esc(ch.cover)}');background-size:cover;"`:''}></div>
+                  <div class="channel-body">
+                    <img class="channel-avatar" src="${esc(ch.avatar || CFG.DEF_AVATAR + encodeURIComponent(ch.name))}" onerror="this.src='${CFG.DEF_AVATAR}ch'">
+                    <div class="channel-name">
+                      ${esc(ch.name)}
+                      ${ch.verified?'<i class="fas fa-check-circle channel-verified"></i>':''}
+                    </div>
+                    <p class="channel-desc">${esc(ch.description||'').substring(0,60)}</p>
+                    <p class="channel-subs"><i class="fas fa-users"></i> ${(ch.subscribers||[]).length} подписчиков</p>
+                    ${ch.ownerId !== this.user.id ? `
+                      <button class="btn ${isSub?'btn-outline':'btn-primary'} btn-sm" style="margin-top:10px;" onclick="event.stopPropagation();App.toggleSub('${ch.id}')">
+                        ${isSub?'Отписаться':'Подписаться'}
+                      </button>
+                    ` : ''}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `}
+      </div>
+    `;
+  },
+
+  renderChannel(c, id) {
+    const ch = this.data.channels.find(x => x.id === id);
+    if (!ch) return c.innerHTML = '<div class="container"><div class="empty-state">Канал не найден</div></div>';
+    
+    const owner = this.data.users.find(u => u.id === ch.ownerId);
+    const isOwner = ch.ownerId === this.user.id;
+    const isSub = (ch.subscribers||[]).includes(this.user.id);
+    const news = this.data.news.filter(n => n.authorId === ch.id && n.status === 'approved');
+    
+    c.innerHTML = `
+      <div class="container" style="padding-top:32px;">
+        <div class="profile-header">
+          <div class="profile-cover" ${ch.cover?`style="background-image:url('${esc(ch.cover)}');background-size:cover;"`:''}></div>
+          <div class="profile-info">
+            <div class="profile-avatar-wrap">
+              <img class="profile-avatar" src="${esc(ch.avatar || CFG.DEF_AVATAR + encodeURIComponent(ch.name))}" onerror="this.src='${CFG.DEF_AVATAR}ch'">
+            </div>
+            <div class="profile-details">
+              <h2 class="profile-name">
+                ${esc(ch.name)}
+                ${ch.verified?'<i class="fas fa-check-circle verified-badge" title="Верифицирован"></i>':''}
+              </h2>
+              <p class="text-muted" style="font-size:13px;">Владелец: ${esc(owner?.username||'?')}</p>
+              <div class="profile-stats">
+                <div class="profile-stat"><div class="profile-stat-num">${(ch.subscribers||[]).length}</div><div class="profile-stat-label">Подписчиков</div></div>
+                <div class="profile-stat"><div class="profile-stat-num">${news.length}</div><div class="profile-stat-label">Новостей</div></div>
+              </div>
+              <p class="text-muted mt-16">${esc(ch.description||'')}</p>
+            </div>
+            <div class="profile-actions">
+              ${isOwner ? `
+                ${!ch.verified && !ch.verificationRequested ? `<button class="btn btn-outline btn-sm" onclick="App.requestVerify('${ch.id}')"><i class="fas fa-check-circle"></i> Верификация</button>` : ''}
+                ${ch.verificationRequested && !ch.verified ? '<span class="status-pill pending">На проверке</span>' : ''}
+                ${ch.verified ? `<button class="btn btn-primary btn-sm" onclick="App.modal('suggestNews')"><i class="fas fa-newspaper"></i> Новость</button>` : ''}
+                <button class="btn btn-outline btn-sm" onclick="App.modal('editChannel')"><i class="fas fa-cog"></i></button>
+                <button class="btn btn-danger btn-sm" onclick="App.deleteChannel('${ch.id}')"><i class="fas fa-trash"></i></button>
+              ` : `
+                <button class="btn ${isSub?'btn-danger':'btn-primary'} btn-sm" onclick="App.toggleSub('${ch.id}')">
+                  <i class="fas fa-${isSub?'bell-slash':'bell'}"></i> ${isSub?'Отписаться':'Подписаться'}
+                </button>
+              `}
+            </div>
+          </div>
+        </div>
+        
+        ${news.length > 0 ? `
+          <h2 class="section-title mt-24">Новости канала</h2>
+          <div class="news-grid">${news.map(n => this.newsCard(n)).join('')}</div>
+        ` : ''}
+      </div>
+    `;
+  },
+
+  async toggleSub(chId) {
+    const ch = this.data.channels.find(x => x.id === chId);
+    if (!ch) return;
+    if (!ch.subscribers) ch.subscribers = [];
+    const idx = ch.subscribers.indexOf(this.user.id);
+    if (idx >= 0) { ch.subscribers.splice(idx, 1); this.toast('Отписались', 'info'); }
+    else { ch.subscribers.push(this.user.id); this.toast('Подписались!', 'success'); }
+    await this.save();
+    this.go('channel/' + chId);
+  },
+
+  async requestVerify(chId) {
+    const ch = this.data.channels.find(x => x.id === chId);
+    if (!ch) return;
+    ch.verificationRequested = true;
+    await this.save();
+    this.toast('Заявка отправлена!', 'success');
+    this.go('channel/' + chId);
+  },
+
+  async deleteChannel(chId) {
+    if (!confirm('Удалить канал безвозвратно?')) return;
+    this.data.channels = this.data.channels.filter(c => c.id !== chId);
+    this.user.channelId = null;
+    await this.save();
+    this.toast('Канал удалён', 'success');
+    this.go('channels');
+  },
+
+  // --- PROFILE ---
+  renderProfile(c, uid) {
+    uid = uid || this.user.id;
+    const u = this.data.users.find(x => x.id === uid);
+    if (!u) return c.innerHTML = '<div class="container"><div class="empty-state">Пользователь не найден</div></div>';
+    
+    const isOwn = u.id === this.user.id;
+    const channel = this.data.channels.find(ch => ch.ownerId === u.id);
+    const role = u.role || 'user';
+    const isSubscribed = (u.subscribers || []).includes(this.user.id);
+    const postCount = this.data.forumPosts.filter(p => p.authorId === u.id).length;
+    const newsCount = channel ? this.data.news.filter(n => n.authorId === channel.id).length : 0;
+    
+    c.innerHTML = `
+      <div class="container" style="padding-top:32px;">
+        <div class="profile-header">
+          <div class="profile-cover" ${u.cover?`style="background-image:url('${esc(u.cover)}');background-size:cover;"`:''}></div>
+          <div class="profile-info">
+            <div class="profile-avatar-wrap">
+              <img class="profile-avatar" src="${esc(u.avatar || CFG.DEF_AVATAR + encodeURIComponent(u.username))}" onerror="this.src='${CFG.DEF_AVATAR}u'">
+              ${u.status === 'online' ? '<div class="online-dot"></div>' : '<div class="offline-dot"></div>'}
+            </div>
+            <div class="profile-details">
+              <h2 class="profile-name">
+                ${esc(u.username)}
+                <span class="role-badge ${role}">${role === 'admin' ? 'ADMIN' : role === 'moder' ? 'MODER' : 'USER'}</span>
+              </h2>
+              <div class="profile-status ${u.status==='online'?'online':''}">
+                <i class="fas fa-circle" style="font-size:8px;"></i>
+                ${u.status==='online'?'В сети':u.statusText||'Не в сети'}
+              </div>
+              <div class="profile-stats">
+                <div class="profile-stat"><div class="profile-stat-num">${postCount}</div><div class="profile-stat-label">Постов</div></div>
+                <div class="profile-stat"><div class="profile-stat-num">${(u.subscribers||[]).length}</div><div class="profile-stat-label">Подписчиков</div></div>
+                <div class="profile-stat"><div class="profile-stat-num">${(u.subscriptions||[]).length}</div><div class="profile-stat-label">Подписок</div></div>
+                ${channel ? `<div class="profile-stat"><div class="profile-stat-num">${newsCount}</div><div class="profile-stat-label">Новостей</div></div>` : ''}
+              </div>
+              <p class="text-muted mt-16" style="font-size:13px;"><i class="fas fa-calendar"></i> На портале с ${new Date(u.joinedAt*1000).toLocaleDateString('ru-RU')}</p>
+            </div>
+            <div class="profile-actions">
+              ${isOwn ? `
+                <button class="btn btn-outline btn-sm" onclick="App.modal('editProfile')"><i class="fas fa-pen"></i> Редактировать</button>
+                ${role === 'admin' || role === 'moder' ? `<button class="btn btn-primary btn-sm" onclick="App.go('admin')"><i class="fas fa-shield-alt"></i> Админ</button>` : ''}
+                <button class="btn btn-danger btn-sm" onclick="App.logout()"><i class="fas fa-sign-out-alt"></i></button>
+              ` : `
+                <button class="btn ${isSubscribed?'btn-danger':'btn-primary'} btn-sm" onclick="App.toggleUserSub('${u.id}')">
+                  <i class="fas fa-${isSubscribed?'user-minus':'user-plus'}"></i> ${isSubscribed?'Отписаться':'Подписаться'}
+                </button>
+              `}
+            </div>
+          </div>
+        </div>
+        
+        ${channel ? `
+          <div class="card" style="cursor:pointer;" onclick="App.go('channel/${channel.id}')">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <img src="${esc(channel.avatar||CFG.DEF_AVATAR+encodeURIComponent(channel.name))}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;" onerror="this.src='${CFG.DEF_AVATAR}ch'">
+              <div style="flex:1;">
+                <div style="font-weight:800;display:flex;align-items:center;gap:6px;">
+                  ${esc(channel.name)} ${channel.verified?'<i class="fas fa-check-circle verified-badge"></i>':''}
+                </div>
+                <p class="text-muted" style="font-size:13px;">${(channel.subscribers||[]).length} подписчиков</p>
+              </div>
+              <i class="fas fa-chevron-right text-muted"></i>
+            </div>
+          </div>
+        ` : isOwn ? `
+          <div class="card text-center">
+            <p class="text-muted mb-16">У вас ещё нет канала</p>
+            <button class="btn btn-primary" onclick="App.modal('newChannel')"><i class="fas fa-tv"></i> Создать канал</button>
+          </div>
+        ` : ''}
+        
+        <div class="card">
+          <div class="card-header"><span class="card-title"><i class="fas fa-medal"></i> Достижения (${(u.badges||[]).length}/${this.data.badges.length})</span></div>
+          <div class="badge-grid">
+            ${this.data.badges.map(b => `
+              <div class="badge-item ${(u.badges||[]).includes(b.id)?'':'locked'}">
+                <div class="badge-icon">${b.icon}</div>
+                <div class="badge-name">${esc(b.name)}</div>
+                <p class="text-muted" style="font-size:11px;margin-top:4px;">${esc(b.desc)}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  async toggleUserSub(uid) {
+    const u = this.data.users.find(x => x.id === uid);
+    if (!u) return;
+    if (!u.subscribers) u.subscribers = [];
+    if (!this.user.subscriptions) this.user.subscriptions = [];
+    
+    const idx = u.subscribers.indexOf(this.user.id);
+    if (idx >= 0) {
+      u.subscribers.splice(idx, 1);
+      this.user.subscriptions = this.user.subscriptions.filter(x => x !== uid);
+      this.toast('Отписались', 'info');
+    } else {
+      u.subscribers.push(this.user.id);
+      this.user.subscriptions.push(uid);
+      this.toast('Подписались!', 'success');
+    }
+    await this.save();
+    this.go('profile/' + uid);
+  },
+
+  renderBadges(c) {
+    c.innerHTML = `
+      <div class="container" style="padding-top:32px;">
+        <h1 class="section-title">Все достижения</h1>
+        <div class="badge-grid">
+          ${this.data.badges.map(b => `
+            <div class="badge-item ${(this.user.badges||[]).includes(b.id)?'':'locked'}">
+              <div class="badge-icon">${b.icon}</div>
+              <div class="badge-name">${esc(b.name)}</div>
+              <p class="text-muted" style="font-size:11px;margin-top:4px;">${esc(b.desc)}</p>
+              ${(this.user.badges||[]).includes(b.id) ? '<p style="color:var(--online);font-size:11px;margin-top:4px;"><i class="fas fa-check"></i> Получено</p>' : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+
+  // --- ADMIN ---
+  adminTab: 'users',
+  
+  renderAdmin(c) {
+    const role = this.user.role;
+    if (role !== 'admin' && role !== 'moder') {
+      return c.innerHTML = '<div class="container"><div class="empty-state"><i class="fas fa-lock"></i><p>Доступ запрещён</p></div></div>';
+    }
+    const tab = this.adminTab;
+    const isAdmin = role === 'admin';
+    let content = '';
+    if (tab === 'users') content = this.adminUsers();
+    else if (tab === 'channels') content = this.adminChannels();
+    else if (tab === 'news') content = this.adminNews();
+    else if (tab === 'polls' && isAdmin) content = this.adminPolls();
+    else if (tab === 'settings' && isAdmin) content = this.adminSettings();
+    else if (!isAdmin) { this.adminTab = 'news'; content = this.adminNews(); }
+    
+    c.innerHTML = `
+      <div class="container" style="padding-top:32px;">
+        <h1 class="section-title">Админ-панель ${role === 'moder' ? '(Модератор)' : ''}</h1>
+        <div class="admin-tabs">
+          ${isAdmin ? `<button class="admin-tab ${tab==='users'?'active':''}" onclick="App.adminTab='users';App.go('admin')"><i class="fas fa-users"></i> Пользователи</button>` : ''}
+          ${isAdmin ? `<button class="admin-tab ${tab==='channels'?'active':''}" onclick="App.adminTab='channels';App.go('admin')"><i class="fas fa-tv"></i> Каналы</button>` : ''}
+          <button class="admin-tab ${tab==='news'?'active':''}" onclick="App.adminTab='news';App.go('admin')"><i class="fas fa-newspaper"></i> Новости</button>
+          ${isAdmin ? `<button class="admin-tab ${tab==='polls'?'active':''}" onclick="App.adminTab='polls';App.go('admin')"><i class="fas fa-poll"></i> Голосования</button>` : ''}
+          ${isAdmin ? `<button class="admin-tab ${tab==='settings'?'active':''}" onclick="App.adminTab='settings';App.go('admin')"><i class="fas fa-cog"></i> Настройки</button>` : ''}
+        </div>
+        ${content}
+      </div>
+    `;
+  },
+
+  adminUsers() {
+    return `
+      <div class="card" style="overflow-x:auto;">
+        <table class="admin-table">
+          <thead><tr><th>Пользователь</th><th>Роль</th><th>Статус</th><th>Действия</th></tr></thead>
+          <tbody>
+            ${this.data.users.map(u => {
+              const r = u.role || 'user';
+              const isBanned = u.isBanned;
+              const isMuted = u.mutedUntil > Date.now()/1000;
+              return `
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <img class="avatar-sm" src="${esc(u.avatar||CFG.DEF_AVATAR+encodeURIComponent(u.username))}" onerror="this.src='${CFG.DEF_AVATAR}u'">
+                      <div>
+                        <div style="font-weight:700;">${esc(u.username)}</div>
+                        <div class="text-muted" style="font-size:12px;">${esc(u.phone||'')}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="role-badge ${r}">${r.toUpperCase()}</span></td>
+                  <td>
+                    ${isBanned?'<span class="status-pill banned">Бан</span>':
+                      isMuted?'<span class="status-pill muted">Мут</span>':
+                      u.status==='online'?'<span class="status-pill online">Онлайн</span>':'<span class="status-pill offline">Офлайн</span>'}
+                  </td>
+                  <td>
+                    ${u.id !== this.user.id ? `
+                      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                        <select class="form-input" style="padding:6px 10px;font-size:12px;width:auto;" onchange="App.setRole('${u.id}',this.value)">
+                          <option value="user" ${r==='user'?'selected':''}>User (0)</option>
+                          <option value="moder" ${r==='moder'?'selected':''}>Moder</option>
+                          <option value="admin" ${r==='admin'?'selected':''}>Admin (1)</option>
+                        </select>
+                        <button class="btn ${isBanned?'btn-success':'btn-danger'} btn-sm btn-icon" onclick="App.toggleBan('${u.id}')" title="Бан">
+                          <i class="fas fa-${isBanned?'unlock':'ban'}"></i>
+                        </button>
+                        <button class="btn btn-warning btn-sm btn-icon" onclick="App.mute('${u.id}')" title="Мут 1ч">
+                          <i class="fas fa-volume-mute"></i>
+                        </button>
+                      </div>
+                    ` : '<span class="text-muted">Вы</span>'}
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  },
+
+  adminChannels() {
+    const pending = this.data.channels.filter(c => c.verificationRequested && !c.verified);
+    return `
+      ${pending.length > 0 ? `
+        <div class="card mb-24">
+          <div class="card-header"><span class="card-title" style="color:var(--warning);"><i class="fas fa-clock"></i> Заявки на верификацию (${pending.length})</span></div>
+          ${pending.map(ch => {
+            const owner = this.data.users.find(u => u.id === ch.ownerId);
+            return `
+              <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-input);border-radius:var(--radius-sm);margin-bottom:10px;">
+                <img class="avatar-md" src="${esc(ch.avatar||CFG.DEF_AVATAR+encodeURIComponent(ch.name))}" onerror="this.src='${CFG.DEF_AVATAR}ch'">
+                <div style="flex:1;">
+                  <strong>${esc(ch.name)}</strong>
+                  <p class="text-muted" style="font-size:13px;">Владелец: ${esc(owner?.username||'?')}</p>
+                </div>
+                <button class="btn btn-success btn-sm" onclick="App.verifyChannel('${ch.id}',true)"><i class="fas fa-check"></i></button>
+                <button class="btn btn-danger btn-sm" onclick="App.verifyChannel('${ch.id}',false)"><i class="fas fa-times"></i></button>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : ''}
+      <div class="card">
+        <div class="card-header"><span class="card-title">Все каналы (${this.data.channels.length})</span></div>
+        ${this.data.channels.map(ch => `
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);">
+            <img class="avatar-sm" src="${esc(ch.avatar||CFG.DEF_AVATAR+encodeURIComponent(ch.name))}" onerror="this.src='${CFG.DEF_AVATAR}ch'">
+            <span style="flex:1;font-weight:600;">${esc(ch.name)} ${ch.verified?'<i class="fas fa-check-circle verified-badge"></i>':''}</span>
+            <span class="text-muted">${(ch.subscribers||[]).length} подп.</span>
+          </div>
+        `).join('')}
+        ${this.data.channels.length === 0 ? '<p class="text-muted">Каналов нет</p>' : ''}
+      </div>
+    `;
+  },
+
+  adminNews() {
+    const pending = this.data.news.filter(n => n.status === 'pending');
+    const approved = this.data.news.filter(n => n.status === 'approved');
+    return `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-newspaper"></i> Управление новостями</span>
+          <button class="btn btn-primary btn-sm" onclick="App.modal('createNews')"><i class="fas fa-plus"></i> Создать</button>
+        </div>
+        ${pending.length > 0 ? `
+          <h4 style="color:var(--warning);margin-bottom:12px;">Ожидают одобрения (${pending.length})</h4>
+          ${pending.map(n => {
+            let author = '?';
+            if (n.authorType === 'channel') {
+              const ch = this.data.channels.find(c => c.id === n.authorId);
+              if (ch) author = ch.name;
+            }
+            return `
+              <div style="padding:14px;background:var(--bg-input);border-radius:var(--radius-sm);margin-bottom:10px;">
+                <div class="flex-between" style="gap:10px;">
+                  <div style="flex:1;min-width:0;">
+                    <strong>${esc(n.title)}</strong>
+                    <p class="text-muted" style="font-size:13px;">Канал: ${esc(author)} · ${timeAgo(n.timestamp)}</p>
+                    <p style="font-size:14px;margin-top:8px;">${esc(n.content).substring(0,150)}...</p>
+                    ${n.image ? `<img src="${esc(n.image)}" style="max-height:100px;border-radius:6px;margin-top:8px;" onerror="this.style.display='none'">` : ''}
+                    ${n.evidenceImage ? `<div style="margin-top:8px;"><small class="text-muted">Доказательство:</small><br><img src="${esc(n.evidenceImage)}" style="max-height:100px;border-radius:6px;margin-top:4px;" onerror="this.style.display='none'"></div>` : ''}
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:5px;">
+                    <button class="btn btn-success btn-sm btn-icon" onclick="App.approveNews('${n.id}',true)" title="Одобрить"><i class="fas fa-check"></i></button>
+                    <button class="btn btn-danger btn-sm btn-icon" onclick="App.approveNews('${n.id}',false)" title="Отклонить"><i class="fas fa-times"></i></button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        ` : '<p class="text-muted mb-16">Нет ожидающих новостей</p>'}
+        
+        <h4 style="margin:20px 0 12px;">Опубликованные (${approved.length})</h4>
+        ${approved.slice(0,15).map(n => `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+            <span style="flex:1;font-weight:500;">${esc(n.title)}</span>
+            <span class="text-muted" style="font-size:13px;">${timeAgo(n.timestamp)}</span>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="App.deleteNews('${n.id}')"><i class="fas fa-trash"></i></button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  },
+
+  adminPolls() {
+    return `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-poll"></i> Голосования</span>
+          <button class="btn btn-primary btn-sm" onclick="App.modal('createPoll')"><i class="fas fa-plus"></i> Создать</button>
+        </div>
+        ${this.data.polls.length === 0 ? '<p class="text-muted">Нет голосований</p>' : this.data.polls.map(p => {
+          const total = p.options.reduce((s,o) => s + (o.votes||0), 0);
+          return `
+            <div style="padding:14px;background:var(--bg-input);border-radius:var(--radius-sm);margin-bottom:10px;">
+              <div class="flex-between" style="gap:10px;">
+                <div>
+                  <strong>${esc(p.question)}</strong>
+                  <p class="text-muted" style="font-size:13px;">
+                    <span class="status-pill ${p.status==='active'?'online':'offline'}">${p.status}</span> · ${total} голосов
+                  </p>
+                </div>
+                <div style="display:flex;gap:5px;">
+                  ${p.status==='active'?`<button class="btn btn-outline btn-sm" onclick="App.closePoll('${p.id}')"><i class="fas fa-lock"></i></button>`:''}
+                  <button class="btn btn-danger btn-sm btn-icon" onclick="App.deletePoll('${p.id}')"><i class="fas fa-trash"></i></button>
+                </div>
+              </div>
+              <div style="margin-top:10px;">
+                ${p.options.map(o => {
+                  const pct = total > 0 ? Math.round(o.votes/total*100) : 0;
+                  return `<div style="font-size:13px;margin:3px 0;">${esc(o.text)}: <strong>${o.votes||0}</strong> (${pct}%)</div>`;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  },
+
+  adminSettings() {
+    const s = this.data.settings;
+    return `
+      <div class="card">
+        <div class="card-header"><span class="card-title"><i class="fas fa-cog"></i> Настройки главной страницы</span></div>
+        <div class="form-group">
+          <label>Режим главной</label>
+          <select class="form-input" id="setMode">
+            <option value="info" ${s.mainPageMode==='info'?'selected':''}>Информация</option>
+            <option value="news" ${s.mainPageMode==='news'?'selected':''}>Новость</option>
+            <option value="poll" ${s.mainPageMode==='poll'?'selected':''}>Голосование</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Логотип (URL изображения)</label>
+          <input class="form-input" id="setLogo" value="${esc(s.logoUrl||'')}" placeholder="https://...">
+          <div class="file-upload" onclick="document.getElementById('fileInput').click()" style="margin-top:8px;">
+            <i class="fas fa-upload"></i><div>Загрузить логотип</div>
+          </div>
+          <div id="logoPreview"></div>
+        </div>
+        <div class="form-group">
+          <label>Заголовок Hero</label>
+          <input class="form-input" id="setTitle" value="${esc(s.heroTitle||'')}">
+        </div>
+        <div class="form-group">
+          <label>Подзаголовок</label>
+          <input class="form-input" id="setSubtitle" value="${esc(s.heroSubtitle||'')}">
+        </div>
+        <div class="form-group">
+          <label>Картинки Hero (по одной ссылке на строку)</label>
+          <textarea class="form-input" id="setImages" rows="4">${(s.heroImages||[]).join('\n')}</textarea>
+        </div>
+        <div class="form-group">
+          <label>О портале</label>
+          <textarea class="form-input" id="setAbout">${esc(s.aboutText||'')}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Правила</label>
+          <textarea class="form-input" id="setRules">${esc(s.rules||'')}</textarea>
+        </div>
+        <button class="btn btn-primary" onclick="App.saveSettings()"><i class="fas fa-save"></i> Сохранить</button>
+      </div>
+    `;
+  },
+
+  async setRole(uid, role) {
+    const u = this.data.users.find(x => x.id === uid);
+    if (!u) return;
+    u.role = role;
+    await this.save();
+    this.toast(`Роль изменена на ${role}`, 'success');
+    this.go('admin');
+  },
+  async toggleBan(uid) {
+    const u = this.data.users.find(x => x.id === uid);
+    if (!u) return;
+    u.isBanned = u.isBanned ? 0 : 1;
+    if (u.isBanned) u.status = 'offline';
+    await this.save();
+    this.toast(u.isBanned?'Забанен':'Разбанен', u.isBanned?'warning':'success');
+    this.go('admin');
+  },
+  async mute(uid) {
+    const u = this.data.users.find(x => x.id === uid);
+    if (!u) return;
+    u.mutedUntil = Date.now()/1000 + CFG.MUTE_DURATION;
+    await this.save();
+    this.toast('Замучен на 1 час', 'warning');
+    this.go('admin');
+  },
+  async verifyChannel(chId, approve) {
+    const ch = this.data.channels.find(x => x.id === chId);
+    if (!ch) return;
+    if (approve) {
+      ch.verified = true;
+      ch.verificationRequested = false;
+      const owner = this.data.users.find(u => u.id === ch.ownerId);
+      if (owner && !(owner.badges||[]).includes('badge6')) owner.badges.push('badge6');
+    } else {
+      ch.verificationRequested = false;
+    }
+    await this.save();
+    this.toast(approve?'Канал верифицирован':'Заявка отклонена', approve?'success':'warning');
+    this.go('admin');
+  },
+  async approveNews(nId, approve) {
+    const n = this.data.news.find(x => x.id === nId);
+    if (!n) return;
+    n.status = approve ? 'approved' : 'rejected';
+    await this.save();
+    this.toast(approve?'Новость опубликована':'Отклонена', approve?'success':'warning');
+    this.go('admin');
+  },
+  async deleteNews(nId) {
+    if (!confirm('Удалить новость?')) return;
+    this.data.news = this.data.news.filter(n => n.id !== nId);
+    await this.save();
+    this.toast('Удалено', 'success');
+    this.go('admin');
+  },
+  async closePoll(pId) {
+    const p = this.data.polls.find(x => x.id === pId);
+    if (!p) return;
+    p.status = 'closed';
+    await this.save();
+    this.toast('Голосование закрыто', 'info');
+    this.go('admin');
+  },
+  async deletePoll(pId) {
+    if (!confirm('Удалить голосование?')) return;
+    this.data.polls = this.data.polls.filter(p => p.id !== pId);
+    await this.save();
+    this.toast('Удалено', 'success');
+    this.go('admin');
+  },
+  async saveSettings() {
+    this.data.settings.mainPageMode = document.getElementById('setMode').value;
+    this.data.settings.logoUrl = document.getElementById('setLogo').value;
+    this.data.settings.heroTitle = document.getElementById('setTitle').value;
+    this.data.settings.heroSubtitle = document.getElementById('setSubtitle').value;
+    this.data.settings.heroImages = document.getElementById('setImages').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    this.data.settings.aboutText = document.getElementById('setAbout').value;
+    this.data.settings.rules = document.getElementById('setRules').value;
+    const saved = await this.save();
+    if (saved) {
+      this.toast('Сохранено!', 'success');
+      this.go('admin');
+    }
+  },
+
+  // --- MODALS ---
+  modal(type) {
+    let html = '';
+    switch (type) {
+      case 'editProfile':
+        html = `
+          <div class="modal-header"><h2>Редактировать профиль</h2><button class="modal-close" onclick="App.closeModal()"><i class="fas fa-times"></i></button></div>
+          <div class="form-group">
+            <label>Аватар</label>
+            <div class="file-upload" onclick="document.getElementById('fileInput').click()">
+              <i class="fas fa-camera"></i><div>Загрузить</div>
+            </div>
+            <div id="imgPreview"></div>
+          </div>
+          <div class="form-group">
+            <label>Обложка</label>
+            <div class="file-upload" onclick="document.getElementById('fileInput2').click()">
+              <i class="fas fa-image"></i><div>Загрузить обложку</div>
+            </div>
+            <div id="imgPreview2"></div>
+          </div>
+          <div class="form-group">
+            <label>Статус</label>
+            <select class="form-input" id="mStatus">
+              <option value="online" ${this.user.status==='online'?'selected':''}>В сети</option>
+              <option value="offline" ${this.user.status==='offline'?'selected':''}>Не в сети</option>
+              <option value="busy" ${this.user.status==='busy'?'selected':''}>Занят</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Текст статуса</label>
+            <input class="form-input" id="mStatusText" value="${esc(this.user.statusText||'')}">
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="App.saveProfile()"><i class="fas fa-save"></i> Сохранить</button>
+        `;
+        break;
+        
+      case 'newChannel':
+        html = `
+          <div class="modal-header"><h2>Создать канал</h2><button class="modal-close" onclick="App.closeModal()"><i class="fas fa-times"></i></button></div>
+          <div class="form-group"><label>Название</label><input class="form-input" id="mChName"></div>
+          <div class="form-group"><label>Описание</label><textarea class="form-input" id="mChDesc"></textarea></div>
+          <div class="form-group">
+            <label>Аватар канала</label>
+            <div class="file-upload" onclick="document.getElementById('fileInput').click()"><i class="fas fa-user-circle"></i><div>Загрузить</div></div>
+            <div id="imgPreview"></div>
+          </div>
+          <div class="form-group">
+            <label>Обложка канала</label>
+            <div class="file-upload" onclick="document.getElementById('fileInput2').click()"><i class="fas fa-image"></i><div>Загрузить обложку</div></div>
+            <div id="imgPreview2"></div>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="App.createChannel()"><i class="fas fa-tv"></i> Создать</button>
+        `;
+        break;
+        
+      case 'editChannel':
+        const ch = this.data.channels.find(c => c.ownerId === this.user.id);
+        if (!ch) return;
+        html = `
+          <div class="modal-header"><h2>Настройки канала</h2><button class="modal-close" onclick="App.closeModal()"><i class="fas fa-times"></i></button></div>
+          <div class="form-group"><label>Название</label><input class="form-input" id="mChName" value="${esc(ch.name)}"></div>
+          <div class="form-group"><label>Описание</label><textarea class="form-input" id="mChDesc">${esc(ch.description||'')}</textarea></div>
+          <div class="form-group">
+            <label>Аватар</label>
+            <div class="file-upload" onclick="document.getElementById('fileInput').click()"><i class="fas fa-camera"></i><div>Загрузить</div></div>
+            <div id="imgPreview"></div>
+          </div>
+          <div class="form-group">
+            <label>Обложка</label>
+            <div class="file-upload" onclick="document.getElementById('fileInput2').click()"><i class="fas fa-image"></i><div>Загрузить обложку</div></div>
+            <div id="imgPreview2"></div>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="App.saveChannel('${ch.id}')"><i class="fas fa-save"></i> Сохранить</button>
+        `;
+        break;
+        
+      case 'newPost':
+        html = `
+          <div class="modal-header"><h2>Новая тема</h2><button class="modal-close" onclick="App.closeModal()"><i class="fas fa-times"></i></button></div>
+          <div class="form-group"><label>Заголовок</label><input class="form-input" id="mPostTitle"></div>
+          <div class="form-group"><label>Содержание</label><textarea class="form-input" id="mPostContent" rows="6"></textarea></div>
+          <button class="btn btn-primary" style="width:100%" onclick="App.createPost()"><i class="fas fa-paper-plane"></i> Создать</button>
+        `;
+        break;
+        
+      case 'suggestNews':
+        html = `
+          <div class="modal-header"><h2>Предложить новость</h2><button class="modal-close" onclick="App.closeModal()"><i class="fas fa-times"></i></button></div>
+          <div class="form-group"><label>Заголовок</label><input class="form-input" id="mNewsTitle"></div>
+          <div class="form-group"><label>Текст новости</label><textarea class="form-input" id="mNewsContent" rows="5"></textarea></div>
+          <div class="form-group">
+            <label>Главное изображение</label>
+            <div class="file-upload" onclick="document.getElementById('fileInput').click()"><i class="fas fa-image"></i><div>Загрузить</div></div>
+            <div id="imgPreview"></div>
+          </div>
+          <div class="form-group">
+            <label>Доказательство / Источник (опционально)</label>
+            <div class="file-upload" onclick="document.getElementById('fileInput2').click()" style="border-color:var(--accent);">
+              <i class="fas fa-check-double"></i><div>Загрузить доказательство</div>
+            </div>
+            <div id="imgPreview2"></div>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="App.suggestNews()"><i class="fas fa-paper-plane"></i> Отправить на модерацию</button>
+        `;
+        break;
+        
+      case 'createNews':
+        html = `
+          <div class="modal-header"><h2>Создать новость</h2><button class="modal-close" onclick="App.closeModal()"><i class="fas fa-times"></i></button></div>
+          <div class="form-group"><label>Заголовок</label><input class="form-input" id="mNewsTitle"></div>
+          <div class="form-group"><label>Текст</label><textarea class="form-input" id="mNewsContent" rows="5"></textarea></div>
+          <div class="form-group">
+            <label>Главное изображение</label>
+            <div class="file-upload" onclick="document.getElementById('fileInput').click()"><i class="fas fa-image"></i><div>Загрузить</div></div>
+            <div id="imgPreview"></div>
+          </div>
+          <div class="form-group">
+            <label>Доказательство (опционально)</label>
+            <div class="file-upload" onclick="document.getElementById('fileInput2').click()"><i class="fas fa-check-double"></i><div>Загрузить</div></div>
+            <div id="imgPreview2"></div>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="App.createNewsAdmin()"><i class="fas fa-plus"></i> Опубликовать</button>
+        `;
+        break;
+        
+      case 'createPoll':
+        html = `
+          <div class="modal-header"><h2>Создать голосование</h2><button class="modal-close" onclick="App.closeModal()"><i class="fas fa-times"></i></button></div>
+          <div class="form-group"><label>Вопрос</label><input class="form-input" id="mPollQ"></div>
+          <div id="pollOpts">
+            <div class="form-group"><label>Вариант 1</label><input class="form-input poll-opt"></div>
+            <div class="form-group"><label>Вариант 2</label><input class="form-input poll-opt"></div>
+          </div>
+          <button class="btn btn-outline btn-sm mb-16" onclick="App.addPollOpt()"><i class="fas fa-plus"></i> Добавить вариант</button>
+          <button class="btn btn-primary" style="width:100%" onclick="App.createPoll()"><i class="fas fa-poll"></i> Запустить</button>
+        `;
+        break;
+    }
+    document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('modal').classList.add('active');
+    this.bindFileInputs();
+  },
+
+  bindFileInputs() {
+    const f1 = document.getElementById('fileInput');
+    const f2 = document.getElementById('fileInput2');
+    
+    if (f1) {
+      f1.onchange = async e => {
+        const f = e.target.files[0]; if (!f) return;
+        this.pendingFile = f;
+        const prev = document.getElementById('imgPreview') || document.getElementById('logoPreview');
+        if (prev) {
+          const reader = new FileReader();
+          reader.onload = () => { prev.innerHTML = `<img src="${reader.result}" class="img-preview">`; };
+          reader.readAsDataURL(f);
+        }
+        // Если это логотип — сразу загружаем и вставляем URL
+        if (document.getElementById('setLogo')) {
+          this.toast('Загрузка логотипа...', 'info');
+          const url = await API.uploadImage(f);
+          document.getElementById('setLogo').value = url;
+          this.toast('Логотип загружен!', 'success');
+          this.pendingFile = null;
+        }
+      };
+    }
+    
+    if (f2) {
+      f2.onchange = e => {
+        const f = e.target.files[0]; if (!f) return;
+        this.pendingFile2 = f;
+        const prev = document.getElementById('imgPreview2');
+        if (prev) {
+          const reader = new FileReader();
+          reader.onload = () => { prev.innerHTML = `<img src="${reader.result}" class="img-preview">`; };
+          reader.readAsDataURL(f);
+        }
+      };
+    }
+  },
+
+  closeModal() {
+    document.getElementById('modal').classList.remove('active');
+    this.pendingFile = null;
+    this.pendingFile2 = null;
+  },
+
+  async saveProfile() {
+    this.user.status = document.getElementById('mStatus').value;
+    this.user.statusText = document.getElementById('mStatusText').value;
+    
+    if (this.pendingFile) {
+      this.toast('Загрузка аватара...', 'info');
+      this.user.avatar = await API.uploadImage(this.pendingFile);
+    }
+    if (this.pendingFile2) {
+      this.toast('Загрузка обложки...', 'info');
+      this.user.cover = await API.uploadImage(this.pendingFile2);
+    }
+    
+    this.pendingFile = null;
+    this.pendingFile2 = null;
+    const saved = await this.save();
+    if (saved) {
+      this.updateHeader();
+      this.closeModal();
+      this.toast('Профиль обновлён!', 'success');
+      this.go('profile');
+    }
+  },
+
+  async createChannel() {
+    const name = document.getElementById('mChName').value.trim();
+    if (!name) return this.toast('Введите название', 'error');
+    if (this.data.channels.some(c => c.ownerId === this.user.id)) return this.toast('У вас уже есть канал', 'error');
+    
+    let avatar = CFG.DEF_AVATAR + encodeURIComponent(name);
+    let cover = '';
+    
+    if (this.pendingFile) {
+      this.toast('Загрузка аватара канала...', 'info');
+      avatar = await API.uploadImage(this.pendingFile);
+    }
+    if (this.pendingFile2) {
+      this.toast('Загрузка обложки канала...', 'info');
+      cover = await API.uploadImage(this.pendingFile2);
+    }
+    
+    const ch = {
+      id: genId(),
+      ownerId: this.user.id,
+      name,
+      description: document.getElementById('mChDesc').value.trim(),
+      avatar,
+      cover,
+      verified: false,
+      verificationRequested: false,
+      subscribers: []
+    };
+    this.data.channels.push(ch);
+    this.user.channelId = ch.id;
+    if (!(this.user.badges||[]).includes('badge5')) this.user.badges.push('badge5');
+    
+    const saved = await this.save();
+    this.pendingFile = null;
+    this.pendingFile2 = null;
+    
+    if (saved) {
+      this.closeModal();
+      this.toast('Канал создан!', 'success');
+      this.go('channel/' + ch.id);
+    } else {
+      this.data.channels.pop();
+      this.user.channelId = null;
+    }
+  },
+
+  async saveChannel(chId) {
+    const ch = this.data.channels.find(c => c.id === chId);
+    if (!ch) return;
+    ch.name = document.getElementById('mChName').value.trim() || ch.name;
+    ch.description = document.getElementById('mChDesc').value.trim();
+    if (this.pendingFile) {
+      this.toast('Загрузка аватара...', 'info');
+      ch.avatar = await API.uploadImage(this.pendingFile);
+    }
+    if (this.pendingFile2) {
+      this.toast('Загрузка обложки...', 'info');
+      ch.cover = await API.uploadImage(this.pendingFile2);
+    }
+    this.pendingFile = null;
+    this.pendingFile2 = null;
+    const saved = await this.save();
+    if (saved) {
+      this.closeModal();
+      this.toast('Сохранено!', 'success');
+      this.go('channel/' + chId);
+    }
+  },
+
+  async createPost() {
+    const title = document.getElementById('mPostTitle').value.trim();
+    const content = document.getElementById('mPostContent').value.trim();
+    if (!title || !content) return this.toast('Заполните все поля', 'error');
+    
+    if (this.checkSpam(title + content, 'forum')) {
+      this.user.mutedUntil = Date.now()/1000 + CFG.MUTE_DURATION;
+      await this.save();
+      return this.toast('🚫 Спам! Мут на 1 час', 'error');
+    }
+    
+    const post = {
+      id: genId(),
+      authorId: this.user.id,
+      title, content,
+      likes: [],
+      dislikes: [],
+      comments: [],
+      timestamp: Date.now()/1000
+    };
+    this.data.forumPosts.push(post);
+    if (!(this.user.badges||[]).includes('badge2')) this.user.badges.push('badge2');
+    
+    const saved = await this.save();
+    if (saved) {
+      this.closeModal();
+      this.toast('Тема создана!', 'success');
+      this.go('forum');
+    } else {
+      this.data.forumPosts.pop();
+    }
+  },
+
+  async suggestNews() {
+    const title = document.getElementById('mNewsTitle').value.trim();
+    const content = document.getElementById('mNewsContent').value.trim();
+    if (!title || !content) return this.toast('Заполните все поля', 'error');
+    
+    const ch = this.data.channels.find(c => c.ownerId === this.user.id);
+    if (!ch || !ch.verified) return this.toast('Нужен верифицированный канал', 'error');
+    
+    let img = '', evidence = '';
+    if (this.pendingFile) {
+      this.toast('Загрузка главного изображения...', 'info');
+      img = await API.uploadImage(this.pendingFile);
+    }
+    if (this.pendingFile2) {
+      this.toast('Загрузка доказательства...', 'info');
+      evidence = await API.uploadImage(this.pendingFile2);
+    }
+    
+    const news = {
+      id: genId(),
+      title, content,
+      image: img,
+      evidenceImage: evidence,
+      authorId: ch.id,
+      authorType: 'channel',
+      status: 'pending',
+      likes: [],
+      timestamp: Date.now()/1000
+    };
+    this.data.news.push(news);
+    if (!(this.user.badges||[]).includes('badge4')) this.user.badges.push('badge4');
+    
+    const saved = await this.save();
+    this.pendingFile = null;
+    this.pendingFile2 = null;
+    
+    if (saved) {
+      this.closeModal();
+      this.toast('Отправлено на модерацию!', 'success');
+      this.go('news');
+    } else {
+      // Откат — вот почему новости терялись!
+      const idx = this.data.news.findIndex(n => n.id === news.id);
+      if (idx >= 0) this.data.news.splice(idx, 1);
+      this.toast('Ошибка отправки. Попробуйте снова', 'error');
+    }
+  },
+
+  async createNewsAdmin() {
+    const title = document.getElementById('mNewsTitle').value.trim();
+    const content = document.getElementById('mNewsContent').value.trim();
+    if (!title || !content) return this.toast('Заполните все поля', 'error');
+    
+    let img = '', evidence = '';
+    if (this.pendingFile) {
+      this.toast('Загрузка изображения...', 'info');
+      img = await API.uploadImage(this.pendingFile);
+    }
+    if (this.pendingFile2) {
+      this.toast('Загрузка доказательства...', 'info');
+      evidence = await API.uploadImage(this.pendingFile2);
+    }
+    
+    const news = {
+      id: genId(),
+      title, content,
+      image: img,
+      evidenceImage: evidence,
+      authorId: this.user.id,
+      authorType: 'admin',
+      status: 'approved',
+      likes: [],
+      timestamp: Date.now()/1000
+    };
+    this.data.news.push(news);
+    
+    const saved = await this.save();
+    this.pendingFile = null;
+    this.pendingFile2 = null;
+    
+    if (saved) {
+      this.closeModal();
+      this.toast('Опубликовано!', 'success');
+      this.go('admin');
+    } else {
+      const idx = this.data.news.findIndex(n => n.id === news.id);
+      if (idx >= 0) this.data.news.splice(idx, 1);
+    }
+  },
+
+  addPollOpt() {
+    const c = document.getElementById('pollOpts');
+    const n = c.querySelectorAll('.poll-opt').length + 1;
+    const d = document.createElement('div');
+    d.className = 'form-group';
+    d.innerHTML = `<label>Вариант ${n}</label><input class="form-input poll-opt">`;
+    c.appendChild(d);
+  },
+
+  async createPoll() {
+    const q = document.getElementById('mPollQ').value.trim();
+    const opts = [...document.querySelectorAll('.poll-opt')].map(i => i.value.trim()).filter(Boolean);
+    if (!q || opts.length < 2) return this.toast('Нужен вопрос и минимум 2 варианта', 'error');
+    
+    this.data.polls.forEach(p => { if (p.status === 'active') p.status = 'closed'; });
+    
+    const poll = {
+      id: genId(),
+      question: q,
+      options: opts.map(t => ({text: t, votes: 0})),
+      votedUsers: [],
+      status: 'active',
+      timestamp: Date.now()/1000
+    };
+    this.data.polls.push(poll);
+    this.data.settings.mainPageMode = 'poll';
+    
+    const saved = await this.save();
+    if (saved) {
+      this.closeModal();
+      this.toast('Голосование запущено!', 'success');
+      this.go('admin');
+    } else {
+      this.data.polls.pop();
+    }
+  },
+
+  toggleTheme() {
+    const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+    localStorage.setItem('ooe_theme', t);
+    document.getElementById('themeIcon').className = t === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+  },
+
+  toggleMobile() {
+    document.getElementById('mobileNav').classList.toggle('active');
+  },
+
+  toast(msg, type = 'info') {
+    const c = document.getElementById('toasts');
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.innerHTML = `<i class="fas fa-${type==='success'?'check-circle':type==='error'?'exclamation-circle':type==='warning'?'exclamation-triangle':'info-circle'}"></i> ${esc(msg)}`;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+};
+
+// Init
+document.getElementById('modal').onclick = e => { if (e.target.id === 'modal') App.closeModal(); };
+const savedTheme = localStorage.getItem('ooe_theme') || 'dark';
+document.documentElement.dataset.theme = savedTheme;
+document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+App.init();
+</script>
+</body>
+</html>
