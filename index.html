@@ -9,7 +9,7 @@
 <meta property="og:title" content="ООИ - Организация Объединённых Империй">
 <meta property="og:description" content="Сообщество цифровых империй, союзов и организаций">
 <!-- Favicon -->
-<link rel="icon" href="https://cdn.jsdelivr.net/gh/MahnachIvan-dev/-ooe-image@main/Ug7gX.jpg" type="image/x-icon">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%230066ff'/%3E%3Cstop offset='100%25' stop-color='%2300d4ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='48' fill='url(%23grad)'/%3E%3Ctext x='50' y='68' font-size='50' text-anchor='middle' fill='white' font-family='Arial, sans-serif' font-weight='bold'%3E👑%3C/text%3E%3C/svg%3E">
 <link rel="alternate icon" type="image/png" href="https://cdn.jsdelivr.net/gh/MahnachIvan-dev/-ooe-image@main/a7KlP-removebg-preview.png">
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/MahnachIvan-dev/-ooe-image@main/a7KlP-removebg-preview.png">
 <meta name="theme-color" content="#0066ff">
@@ -144,6 +144,40 @@ input, textarea, select { font-family: inherit; }
 }
 .login-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(59, 130, 246, 0.5); }
 .hamburger { display: none; color: var(--text-primary); font-size: 22px; padding: 8px; }
+
+/* Индикатор соединения */
+.connection-indicator {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  position: relative;
+}
+.connection-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: all 0.3s ease;
+}
+.connection-indicator.connecting .connection-dot {
+  background: var(--warning);
+  animation: pulse-dot 1.5s infinite;
+}
+.connection-indicator.online .connection-dot {
+  background: var(--online);
+  box-shadow: 0 0 8px var(--online);
+}
+.connection-indicator.offline .connection-dot {
+  background: var(--danger);
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
 
 /* Search */
 .search-overlay {
@@ -984,6 +1018,9 @@ textarea.form-input { resize: vertical; min-height: 100px; }
     <div class="logo" onclick="App.go('home')">ООИ</div>
     <nav class="nav-links" id="navLinks"></nav>
     <div class="header-right">
+      <div class="connection-indicator connecting" id="connectionIndicator" title="Подключение..." onclick="App.manualRefresh()">
+        <span class="connection-dot"></span>
+      </div>
       <button class="icon-btn" onclick="App.toggleSearch()" title="Поиск"><i class="fas fa-search"></i></button>
       <button class="icon-btn" onclick="App.toggleTheme()" title="Тема"><i id="themeIcon" class="fas fa-moon"></i></button>
       <div id="headerAuth"></div>
@@ -1006,7 +1043,7 @@ textarea.form-input { resize: vertical; min-height: 100px; }
   <footer class="footer">
     <div class="footer-grid">
       <div>
-        <h4>О портале</h4>
+        <h4>О Community</h4>
         <p>ООИ — Организация Объединённых Империй. Сообщество цифровых государств и организаций.</p>
       </div>
       <div>
@@ -1023,7 +1060,11 @@ textarea.form-input { resize: vertical; min-height: 100px; }
         <p>📰 Новостники</p>
         <p>🤝 Союзы</p>
       </div>
-      
+      <div>
+        <h4>Контакты</h4>
+        <p>2026 ООИ</p>
+        
+      </div>
     </div>
     <div class="footer-bottom">ООИ — Организация Объединённых Империй</div>
   </footer>
@@ -1145,12 +1186,27 @@ const App = {
   isSaving: false,
   replyTo: null,
   selectedChannelType: 'empire',
+  // Real-time
+  lastDataHash: '',
+  pollingInterval: null,
+  isPollingActive: false,
+  connectionStatus: 'connecting', // 'connecting', 'online', 'offline'
 
   async load() {
     const fresh = await API.load();
     if (fresh) {
+      const oldData = this.data;
       this.data = fresh;
       try { localStorage.setItem('ooi_data', JSON.stringify(this.data)); } catch(e) {}
+      
+      // Проверяем, есть ли изменения
+      if (oldData) {
+        const hasChanges = this.detectChanges(oldData, fresh);
+        if (hasChanges) {
+          console.log('[Real-time] Данные изменились, обновляем интерфейс');
+          this.onDataChanged();
+        }
+      }
     } else {
       const cached = localStorage.getItem('ooi_data');
       if (cached) {
@@ -1158,6 +1214,129 @@ const App = {
       }
     }
     if (!this.data) this.data = this.defaultData();
+  },
+  
+  // Определение изменений между старой и новой версией данных
+  detectChanges(oldData, newData) {
+    try {
+      const oldStr = JSON.stringify(oldData);
+      const newStr = JSON.stringify(newData);
+      return oldStr !== newStr;
+    } catch (e) {
+      return true; // Если ошибка — считаем что есть изменения
+    }
+  },
+  
+  // Обработчик изменений данных
+  onDataChanged() {
+    // Обновляем текущую страницу если она отображается
+    if (this.page && document.getElementById('main')) {
+      // Обновляем только если пользователь не в модальном окне
+      if (!document.getElementById('modal').classList.contains('active')) {
+        const currentPage = this.page.split('/')[0];
+        // Перерисовываем текущую страницу
+        const m = document.getElementById('main');
+        switch (currentPage) {
+          case 'home': this.renderHome(m); break;
+          case 'news': this.renderNews(m); break;
+          case 'forum': this.renderForum(m); break;
+          case 'channels': this.renderChannels(m); break;
+          case 'channel': {
+            const chId = this.page.split('/')[1];
+            if (chId) this.renderChannel(m, chId);
+            break;
+          }
+          case 'profile': {
+            const uId = this.page.split('/')[1];
+            this.renderProfile(m, uId || this.user?.id);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Показываем уведомление о обновлении (опционально)
+    // this.toast('🔄 Данные обновлены', 'info');
+    
+    // Обновляем индикатор
+    this.updateConnectionStatus('online');
+  },
+  
+  // Запуск real-time обновлений
+  startPolling() {
+    if (this.isPollingActive) return;
+    this.isPollingActive = true;
+    this.connectionStatus = 'connecting';
+    
+    console.log('[Real-time] Запуск polling (каждые 10 секунд)');
+    
+    // Первая проверка сразу
+    this.checkForUpdates();
+    
+    // Затем каждые 10 секунд
+    this.pollingInterval = setInterval(() => {
+      this.checkForUpdates();
+    }, 10000);
+  },
+  
+  // Остановка polling
+  stopPolling() {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+    this.isPollingActive = false;
+    this.connectionStatus = 'offline';
+    console.log('[Real-time] Polling остановлен');
+  },
+  
+  // Проверка обновлений
+  async checkForUpdates() {
+    try {
+      // Быстрая проверка через /api/version
+      const response = await fetch(`${CFG.API_URL}/version`, {
+        headers: {
+          'X-Last-Hash': this.lastDataHash || ''
+        }
+      });
+      
+      if (response.ok) {
+        const versionData = await response.json();
+        
+        if (versionData.hasChanges || !this.lastDataHash) {
+          console.log('[Real-time] Обнаружены изменения, загружаем данные');
+          await this.load();
+          this.lastDataHash = versionData.hash;
+          this.updateConnectionStatus('online');
+        } else {
+          this.updateConnectionStatus('online');
+        }
+      } else {
+        this.updateConnectionStatus('offline');
+      }
+    } catch (e) {
+      console.error('[Real-time] Ошибка проверки:', e);
+      this.updateConnectionStatus('offline');
+    }
+  },
+  
+  // Обновление индикатора соединения
+  updateConnectionStatus(status) {
+    this.connectionStatus = status;
+    const indicator = document.getElementById('connectionIndicator');
+    if (indicator) {
+      indicator.className = `connection-indicator ${status}`;
+      indicator.title = status === 'online' ? 'Онлайн — обновления в реальном времени (нажмите для обновления)' : 
+                        status === 'connecting' ? 'Подключение...' : 'Офлайн (нажмите для обновления)';
+    }
+  },
+  
+  // Ручное обновление данных
+  async manualRefresh() {
+    console.log('[Real-time] Ручное обновление запрошено');
+    this.updateConnectionStatus('connecting');
+    await this.checkForUpdates();
+    this.toast('🔄 Данные обновлены', 'info');
   },
 
   async save() {
@@ -1170,7 +1349,11 @@ const App = {
         this.toast('Ошибка сохранения', 'error');
         return false;
       }
+      
+      // Обновляем локальный хэш чтобы не получить ложное срабатывание polling
       await this.load();
+      this.lastDataHash = ''; // Сбрасываем хэш чтобы следующий polling загрузил свежие данные
+      
       if (this.user) {
         const u = this.data.users.find(x => x.id === this.user.id);
         if (u) this.user = u;
@@ -1275,6 +1458,9 @@ const App = {
   },
 
   logout() {
+    // Останавливаем polling
+    this.stopPolling();
+    
     if (this.user) {
       this.user.status = 'offline';
       this.user.lastSeen = Date.now()/1000;
@@ -1311,6 +1497,20 @@ const App = {
     this.updateHeader();
     this.updateNav();
     this.go('home');
+    
+    // Запускаем real-time обновления
+    this.startPolling();
+    
+    // Останавливаем polling когда вкладка неактивна
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        console.log('[Real-time] Вкладка неактивна, останавливаем polling');
+        this.stopPolling();
+      } else {
+        console.log('[Real-time] Вкладка активна, запускаем polling');
+        this.startPolling();
+      }
+    });
     
     // Scroll to top button
     window.addEventListener('scroll', () => {
