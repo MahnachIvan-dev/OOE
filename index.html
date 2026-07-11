@@ -8,7 +8,12 @@
 <meta name="author" content="ООИ Portal">
 <meta property="og:title" content="ООИ - Организация Объединённых Империй">
 <meta property="og:description" content="Сообщество цифровых империй, союзов и организаций">
-<link rel="icon" href="https://cdn.jsdelivr.net/gh/MahnachIvan-dev/-ooe-image@main/Ug7gX.jpg" type="image/x-icon">
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%230066ff'/%3E%3Cstop offset='100%25' stop-color='%2300d4ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='48' fill='url(%23grad)'/%3E%3Ctext x='50' y='68' font-size='50' text-anchor='middle' fill='white' font-family='Arial, sans-serif' font-weight='bold'%3E👑%3C/text%3E%3C/svg%3E">
+<link rel="alternate icon" type="image/png" href="https://cdn.jsdelivr.net/gh/MahnachIvan-dev/-ooe-image@main/a7KlP-removebg-preview.png">
+<link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/MahnachIvan-dev/-ooe-image@main/a7KlP-removebg-preview.png">
+<meta name="theme-color" content="#0066ff">
+<meta name="msapplication-TileColor" content="#0066ff">
 <title>ООИ - Организация Объединённых Империй</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -1002,7 +1007,7 @@ textarea.form-input { resize: vertical; min-height: 100px; }
     <div class="footer-grid">
       <div>
         <h4>О портале</h4>
-        <p>ООИ — Организация Объединённых Империй. Сообщество цифровых империй, государств и организаций.</p>
+        <p>ООИ — Организация Объединённых Империй. Сообщество цифровых государств и организаций.</p>
       </div>
       <div>
         <h4>Навигация</h4>
@@ -1013,18 +1018,18 @@ textarea.form-input { resize: vertical; min-height: 100px; }
       </div>
       <div>
         <h4>Типы каналов</h4>
-        <p>Империи</p>
-        <p>Организации</p>
-        <p>Новостники</p>
-        <p>Союзы</p>
+        <p>👑 Империи</p>
+        <p>🏛️ Организации</p>
+        <p>📰 Новостники</p>
+        <p>🤝 Союзы</p>
       </div>
       <div>
         <h4>Контакты</h4>
-        <p>ООИ 2026</p>
-        
+        <p>© 2024 ООО</p>
+        <p>Все права защищены</p>
       </div>
     </div>
-    <div class="footer-bottom">ООИ — Организация Объединённых Империй</div>
+    <div class="footer-bottom">© 2024 ООО — Организация Объединённых Империй</div>
   </footer>
 </div>
 
@@ -1531,28 +1536,7 @@ const App = {
       `;
     }
     
-    // Лента активности
-    const activities = (this.data.activities || []).slice(0, 5);
-    let activityHtml = '';
-    if (activities.length) {
-      activityHtml = `
-        <section style="padding:40px 0;">
-          <h2 class="section-title">Лента активности</h2>
-          <div class="activity-feed">
-            ${activities.map(a => {
-              const icons = { join: 'user-plus', post: 'comment', news: 'newspaper', empire: 'crown', alliance: 'handshake' };
-              return `
-                <div class="activity-item">
-                  <div class="activity-icon ${a.type || 'post'}"><i class="fas fa-${icons[a.type] || 'circle'}"></i></div>
-                  <div class="activity-text">${a.text || 'Событие'}</div>
-                  <div class="activity-time">${timeAgo(a.timestamp)}</div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </section>
-      `;
-    }
+    // Лента активности удалена
 
     c.innerHTML = `
       <div class="hero">
@@ -1621,8 +1605,6 @@ const App = {
             </div>
           </div>
         </section>
-        
-        ${activityHtml}
         
         <section style="padding:40px 0;">
           <h2 class="section-title">Частые вопросы</h2>
@@ -2571,7 +2553,7 @@ const App = {
     const ch = this.data.channels.find(x => x.id === chId);
     if (!ch) return;
     
-    const communityLink = (this.data.settings && this.data.settings.communityLink) || 'https://invite.viber.com/?g2=AQBBsxqy%2FrDlOlbPL5C9RdiOVtPeFKkPjeCMSpbg4GY2H2eX5Lcp%2FbTzZu62vYra';
+    const communityLink = (this.data.settings && this.data.settings.communityLink) || 'https://t.me/your_community';
     
     this.openModal(`
       <div class="modal-header">
