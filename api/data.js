@@ -60,6 +60,7 @@ setInterval(() => {
 
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ====================
 function send(res, status, data) {
+  const body = typeof data === 'string' ? data : JSON.stringify(data);
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
@@ -67,9 +68,10 @@ function send(res, status, data) {
     'Access-Control-Allow-Headers': 'Content-Type',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
-    'Referrer-Policy': 'no-referrer'
+    'Referrer-Policy': 'no-referrer',
+    'Content-Length': Buffer.byteLength(body, 'utf8')
   });
-  res.end(typeof data === 'string' ? data : JSON.stringify(data));
+  res.end(body);
 }
 
 // Запрос к JSON Bin
@@ -90,8 +92,9 @@ function jsonBinRequest(method, data) {
       method,
       headers: {
         'X-Master-Key': JSON_BIN_KEY,
-        'Content-Type': 'application/json',
-        ...(body ? { 'Content-Length': Buffer.byteLength(body) } : {})
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json; charset=utf-8',
+        ...(body ? { 'Content-Length': Buffer.byteLength(body, 'utf8') } : {})
       }
     };
 
