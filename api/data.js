@@ -263,6 +263,21 @@ function sanitizeData(data) {
   return data;
 }
 
+// Кэш данных для сравнения версий
+let lastDataHash = '';
+let lastDataTimestamp = 0;
+
+function getHash(data) {
+  const str = JSON.stringify(data);
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return hash.toString();
+}
+
 // ==================== MAIN HANDLER ====================
 module.exports = async (req, res) => {
   // CORS preflight
@@ -285,7 +300,30 @@ module.exports = async (req, res) => {
     if (url === '/api/data' && req.method === 'GET') {
       const result = await jsonBinRequest('GET');
       const data = result.data.record || result.data;
-      return send(res, 200, data);
+      
+      // Вычисляем хэш для проверки изменений
+      const currentHash = getHash(data);
+      const hasChanged = currentHash !== lastDataHash;
+      
+      if (hasChanged) {
+        lastDataHash = currentHash;
+        lastDataTimestamp = Date.now();
+        console.log('[Data] Changes detected, new hash:', currentHash);
+      }
+      
+      // Отправляем с заголовками для кэширования
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, X-Data-Hash',
+        'ETag': currentHash,
+        'X-Data-Hash': currentHash,
+        'X-Data-Timestamp': lastDataTimestamp.toString(),
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      });
+      res.end(JSON.stringify(data));
+      return;
     }
 
     // ============ POST /api/data ============
@@ -326,6 +364,16 @@ module.exports = async (req, res) => {
           jsonbin: !!JSON_BIN_ID,
           github: !!GH_TOKEN
         }
+      });
+    }
+    
+    // ============ GET /api/version ============
+    // Быстрая проверка, изменились ли данные (без загрузки всех данных)
+    if (url === '/api/version' && req.method === 'GET') {
+      return send(res, 200, {
+        hash: lastDataHash,
+        timestamp: lastDataTimestamp,
+        hasChanges: lastDataHash !== req.headers['x-last-hash']
       });
     }
 
