@@ -248,6 +248,8 @@ function sanitizeData(data) {
   if (data.settings && typeof data.settings === 'object') {
     data.settings = {
       mainPageMode: String(data.settings.mainPageMode || 'info').substring(0, 20),
+      maintenanceMode: Boolean(data.settings.maintenanceMode || false),
+      updateMode: Boolean(data.settings.updateMode || false),
       logoUrl: String(data.settings.logoUrl || '').substring(0, 500),
       communityLink: String(data.settings.communityLink || '').substring(0, 500),
       heroImages: Array.isArray(data.settings.heroImages) 
