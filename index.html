@@ -1064,10 +1064,10 @@ textarea.form-input { resize: vertical; min-height: 100px; }
       <div>
         <h4>Контакты</h4>
         <p>2026 ООИ</p>
-        
+
       </div>
     </div>
-    <div class="footer-bottom">ООИ — Организация Объединённых Империй</div>
+    <div class="footer-bottom"> ООИ — Организация Объединённых Империй</div>
   </footer>
 </div>
 
@@ -1589,12 +1589,47 @@ const App = {
       location.reload();
     }, 1000);
   },
+  
+  // Принудительная синхронизация с сервером (без сохранения)
+  async syncFromServer() {
+    console.log('[Sync] Принудительная синхронизация с сервером...');
+    this.updateConnectionStatus('connecting');
+    
+    // Очищаем локальный кэш
+    localStorage.removeItem('ooi_data');
+    localStorage.removeItem('ooi_cache_time');
+    
+    // Загружаем свежие данные
+    await this.load(true);
+    
+    this.updateConnectionStatus('online');
+    this.toast('✅ Данные синхронизированы с сервером!', 'success');
+    
+    // Перерисовываем текущую страницу
+    if (this.page && document.getElementById('main')) {
+      const currentPage = this.page.split('/')[0];
+      const m = document.getElementById('main');
+      switch (currentPage) {
+        case 'home': this.renderHome(m); break;
+        case 'news': this.renderNews(m); break;
+        case 'forum': this.renderForum(m); break;
+        case 'channels': this.renderChannels(m); break;
+        case 'admin': this.renderAdmin(m); break;
+      }
+    }
+  },
 
   async save() {
     if (this.isSaving) return false;
     this.isSaving = true;
     try {
-      // Обновляем кэш и время
+      const ok = await API.save(this.data);
+      if (!ok) {
+        this.toast('Ошибка сохранения', 'error');
+        return false;
+      }
+      
+      // Обновляем кэш и время ПОСЛЕ успешного сохранения
       try {
         localStorage.setItem('ooi_data', JSON.stringify(this.data));
         localStorage.setItem('ooi_cache_time', Date.now().toString());
@@ -1602,15 +1637,8 @@ const App = {
         console.warn('[Cache] Не удалось сохранить в localStorage');
       }
       
-      const ok = await API.save(this.data);
-      if (!ok) {
-        this.toast('Ошибка сохранения', 'error');
-        return false;
-      }
-      
-      // Обновляем локальный хэш чтобы не получить ложное срабатывание polling
-      await this.load();
-      this.lastDataHash = ''; // Сбрасываем хэш чтобы следующий polling загрузил свежие данные
+      // Сбрасываем хэш чтобы следующий polling загрузил свежие данные
+      this.lastDataHash = '';
       
       if (this.user) {
         const u = this.data.users.find(x => x.id === this.user.id);
@@ -1773,7 +1801,8 @@ const App = {
         this.user = u;
         u.status = 'online';
         u.lastSeen = Date.now()/1000;
-        this.save();
+        // НЕ сохраняем при инициализации чтобы не перезаписать новые данные
+        // this.save(); // Закомментировано
       }
     }
     document.getElementById('authScreen').classList.add('hidden');
@@ -3496,6 +3525,9 @@ const App = {
           </button>
           <button class="btn ${updateActive?'btn-primary':'btn-outline'}" onclick="App.toggleUpdateMode()">
             <i class="fas fa-bolt"></i> ${updateActive ? '⚡ Режим обновления ВКЛЮЧЁН (нажмите чтобы отключить)' : '⚡ Запустить обновление'}
+          </button>
+          <button class="btn btn-success" onclick="App.syncFromServer()">
+            <i class="fas fa-sync"></i> 🔄 Синхронизировать с сервером
           </button>
           <button class="btn btn-danger" onclick="App.clearCache()">
             <i class="fas fa-trash"></i> 🗑️ Очистить кэш сайта
