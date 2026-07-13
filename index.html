@@ -3,13 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="ООИ - Организация Объединённых Империй.">
+<meta name="description" content="ООИ - Организация Объединённых Империй. Информационный портал цифровых империй, союзов и организаций.">
 <meta name="keywords" content="ООИ, империи, союзы, организации, новости, форум">
 <meta name="author" content="ООИ Portal">
 <meta property="og:title" content="ООИ - Организация Объединённых Империй">
 <meta property="og:description" content="Сообщество цифровых империй, союзов и организаций">
 <!-- Favicon -->
+
 <link rel="icon" href="https://cdn.jsdelivr.net/gh/MahnachIvan-dev/-ooe-image@main/a7KlP-removebg-preview.png" type="image/x-icon">
+<link rel="alternate icon" type="image/png" href="https://cdn.jsdelivr.net/gh/MahnachIvan-dev/-ooe-image@main/a7KlP-removebg-preview.png">
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/MahnachIvan-dev/-ooe-image@main/a7KlP-removebg-preview.png">
 <meta name="theme-color" content="#0066ff">
 <meta name="msapplication-TileColor" content="#0066ff">
@@ -1193,14 +1195,29 @@ const App = {
 
   async load(forceRefresh = false) {
     try {
+      // Проверяем время последнего обновления кэша
+      const cacheTime = localStorage.getItem('ooi_cache_time');
+      const now = Date.now();
+      const cacheAge = cacheTime ? (now - parseInt(cacheTime)) : Infinity;
+      const cacheMaxAge = 5 * 60 * 1000; // 5 минут
+      
+      // Если кэш старше 5 минут — принудительно обновляем
+      if (cacheAge > cacheMaxAge && !forceRefresh) {
+        console.log('[Cache] Кэш устарел (' + Math.floor(cacheAge / 1000) + 'с), принудительное обновление');
+        forceRefresh = true;
+      }
+      
       const fresh = await API.load();
       if (fresh) {
         const oldData = this.data;
         this.data = fresh;
         
-        // Сохраняем в localStorage только если это не принудительное обновление
-        if (!forceRefresh) {
-          try { localStorage.setItem('ooi_data', JSON.stringify(this.data)); } catch(e) {}
+        // Всегда обновляем кэш и время
+        try {
+          localStorage.setItem('ooi_data', JSON.stringify(this.data));
+          localStorage.setItem('ooi_cache_time', now.toString());
+        } catch(e) {
+          console.warn('[Cache] Не удалось сохранить в localStorage');
         }
         
         // Проверяем, есть ли изменения
@@ -1224,8 +1241,12 @@ const App = {
           }
         }
       } else if (forceRefresh) {
-        // Если принудительное обновление не удалось
-        this.toast('⚠️ Не удалось загрузить свежие данные', 'warning');
+        // Если принудительное обновление не удалось — используем кэш
+        console.warn('[Load] Не удалось загрузить свежие данные, используем кэш');
+        const cached = localStorage.getItem('ooi_data');
+        if (cached) {
+          try { this.data = JSON.parse(cached); } catch(e) {}
+        }
       } else {
         // Используем кэш если нет интернета
         const cached = localStorage.getItem('ooi_data');
@@ -1236,7 +1257,7 @@ const App = {
     } catch (e) {
       console.error('[Load] Error:', e);
       if (forceRefresh) {
-        this.toast('❌ Ошибка загрузки данных', 'error');
+        this.toast('⚠️ Не удалось загрузить свежие данные', 'warning');
       }
     }
     
@@ -1265,6 +1286,13 @@ const App = {
   
   // Обработчик изменений данных
   onDataChanged() {
+    console.log('[Cache] Данные изменились, обновляем кэш');
+    
+    // Обновляем время кэша
+    try {
+      localStorage.setItem('ooi_cache_time', Date.now().toString());
+    } catch(e) {}
+    
     // Обновляем текущую страницу если она отображается
     if (this.page && document.getElementById('main')) {
       // Обновляем только если пользователь не в модальном окне
@@ -1291,9 +1319,6 @@ const App = {
       }
     }
     
-    // Показываем уведомление о обновлении (опционально)
-    // this.toast('🔄 Данные обновлены', 'info');
-    
     // Обновляем индикатор
     this.updateConnectionStatus('online');
   },
@@ -1304,15 +1329,15 @@ const App = {
     this.isPollingActive = true;
     this.connectionStatus = 'connecting';
     
-    console.log('[Real-time] Запуск polling (каждые 10 секунд)');
+    console.log('[Real-time] Запуск polling (каждые 5 секунд)');
     
     // Первая проверка сразу
     this.checkForUpdates();
     
-    // Затем каждые 10 секунд
+    // Затем каждые 5 секунд (быстрее для актуальности)
     this.pollingInterval = setInterval(() => {
       this.checkForUpdates();
-    }, 10000);
+    }, 5000);
   },
   
   // Остановка polling
@@ -1329,6 +1354,20 @@ const App = {
   // Проверка обновлений
   async checkForUpdates() {
     try {
+      // Проверяем время кэша
+      const cacheTime = localStorage.getItem('ooi_cache_time');
+      const now = Date.now();
+      const cacheAge = cacheTime ? (now - parseInt(cacheTime)) : Infinity;
+      
+      // Если кэш старше 5 минут — принудительно обновляем
+      if (cacheAge > 5 * 60 * 1000) {
+        console.log('[Real-time] Кэш устарел, принудительное обновление');
+        await this.load(true);
+        this.lastDataHash = '';
+        this.updateConnectionStatus('online');
+        return;
+      }
+      
       // Быстрая проверка через /api/version
       const response = await fetch(`${CFG.API_URL}/version`, {
         headers: {
@@ -1341,7 +1380,7 @@ const App = {
         
         if (versionData.hasChanges || !this.lastDataHash) {
           console.log('[Real-time] Обнаружены изменения, загружаем данные');
-          await this.load();
+          await this.load(true); // Принудительное обновление
           this.lastDataHash = versionData.hash;
           this.updateConnectionStatus('online');
         } else {
@@ -1374,12 +1413,195 @@ const App = {
     await this.forceRefresh();
     this.toast('🔄 Данные обновлены!', 'success');
   },
+  
+  // Страница технических работ
+  showMaintenancePage() {
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('appScreen').classList.add('hidden');
+    
+    const logo = this.data?.settings?.logoUrl || '';
+    
+    document.body.innerHTML = `
+      <div class="maintenance-page">
+        <div class="maintenance-content">
+          ${logo ? `<img src="${esc(logo)}" alt="ООИ" class="maintenance-logo">` : '<div class="maintenance-logo-text">ООИ</div>'}
+          <h1 class="maintenance-title">🔧 Технические работы</h1>
+          <p class="maintenance-text">На сайте проводятся технические работы.<br>Пожалуйста, зайдите позже.</p>
+          <div class="maintenance-spinner"></div>
+          <p class="maintenance-note">Обычно работы занимают несколько минут</p>
+        </div>
+      </div>
+    `;
+    
+    // Автоматическая проверка каждые 30 секунд
+    setInterval(async () => {
+      await this.load();
+      if (!this.data?.settings?.maintenanceMode) {
+        location.reload();
+      }
+    }, 30000);
+  },
+  
+  // Страница обновления
+  showUpdatePage() {
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('appScreen').classList.add('hidden');
+    
+    const logo = this.data?.settings?.logoUrl || '';
+    
+    document.body.innerHTML = `
+      <div class="update-page">
+        <div class="update-content">
+          ${logo ? `<img src="${esc(logo)}" alt="ООИ" class="update-logo">` : '<div class="update-logo-text">ООИ</div>'}
+          <h1 class="update-title">⚡ Идёт обновление</h1>
+          <p class="update-text">Обновляем сайт для вас...</p>
+          <div class="update-progress">
+            <div class="update-progress-bar"></div>
+          </div>
+          <div class="update-percentage">0%</div>
+          <p class="update-note">Пожалуйста, подождите</p>
+        </div>
+      </div>
+    `;
+    
+    // Анимация прогресса
+    let progress = 0;
+    const progressBar = document.querySelector('.update-progress-bar');
+    const percentageEl = document.querySelector('.update-percentage');
+    
+    const interval = setInterval(() => {
+      progress += Math.random() * 15;
+      if (progress >= 100) progress = 100;
+      
+      if (progressBar) progressBar.style.width = progress + '%';
+      if (percentageEl) percentageEl.textContent = Math.floor(progress) + '%';
+      
+      if (progress >= 100) {
+        clearInterval(interval);
+      }
+    }, 500);
+    
+    // Автоматическая проверка каждые 10 секунд
+    setInterval(async () => {
+      await this.load();
+      if (!this.data?.settings?.updateMode) {
+        location.reload();
+      }
+    }, 10000);
+  },
+  
+  // Переключение режима технических работ (только для админов)
+  async toggleMaintenanceMode() {
+    if (!this.user || this.user.role !== 'admin') {
+      this.toast('❌ Только администраторы могут включать технический режим', 'error');
+      return;
+    }
+    
+    const currentState = this.data.settings.maintenanceMode || false;
+    const newState = !currentState;
+    
+    if (newState) {
+      if (!confirm('⚠️ Включить режим технических работ?\n\nВсе пользователи (кроме вас) не смогут пользоваться сайтом.')) {
+        return;
+      }
+    }
+    
+    this.data.settings.maintenanceMode = newState;
+    this.data.settings.updateMode = false; // Отключаем режим обновления если включён
+    
+    const saved = await this.save();
+    if (saved) {
+      this.toast(newState ? '🔧 Технические работы включены' : '✅ Технические работы отключены', newState ? 'warning' : 'success');
+      
+      if (newState) {
+        setTimeout(() => {
+          this.showMaintenancePage();
+        }, 1000);
+      } else {
+        this.go('admin');
+      }
+    }
+  },
+  
+  // Переключение режима обновления (только для админов)
+  async toggleUpdateMode() {
+    if (!this.user || this.user.role !== 'admin') {
+      this.toast('❌ Только администраторы могут включать режим обновления', 'error');
+      return;
+    }
+    
+    const currentState = this.data.settings.updateMode || false;
+    const newState = !currentState;
+    
+    if (newState) {
+      if (!confirm('⚡ Включить режим обновления?\n\nВсе пользователи (кроме вас) увидят страницу обновления.')) {
+        return;
+      }
+    }
+    
+    this.data.settings.updateMode = newState;
+    this.data.settings.maintenanceMode = false; // Отключаем технический режим если включён
+    
+    const saved = await this.save();
+    if (saved) {
+      this.toast(newState ? '⚡ Режим обновления включён' : '✅ Режим обновления отключён', newState ? 'info' : 'success');
+      
+      if (newState) {
+        setTimeout(() => {
+          this.showUpdatePage();
+        }, 1000);
+      } else {
+        this.go('admin');
+      }
+    }
+  },
+  
+  // Очистка кэша сайта
+  async clearCache() {
+    if (!confirm('🗑️ Очистить кэш сайта?\n\nЭто удалит все локально сохранённые данные и перезагрузит страницу с сервера.')) {
+      return;
+    }
+    
+    console.log('[Cache] Очистка кэша...');
+    
+    // Очищаем localStorage
+    const removed = [];
+    if (localStorage.getItem('ooi_data')) { removed.push('ooi_data'); localStorage.removeItem('ooi_data'); }
+    if (localStorage.getItem('ooi_cache_time')) { removed.push('ooi_cache_time'); localStorage.removeItem('ooi_cache_time'); }
+    if (localStorage.getItem('ooi_uid')) { removed.push('ooi_uid'); localStorage.removeItem('ooi_uid'); }
+    if (localStorage.getItem('ooi_theme')) { removed.push('ooi_theme'); localStorage.removeItem('ooi_theme'); }
+    
+    // Очищаем sessionStorage
+    sessionStorage.clear();
+    
+    // Очищаем кэш браузера если возможно
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+      removed.push('browser_cache');
+    }
+    
+    console.log('[Cache] Удалено:', removed.join(', '));
+    this.toast('✅ Кэш очищен! Перезагрузка...', 'success');
+    
+    // Перезагружаем страницу через 1 секунду
+    setTimeout(() => {
+      location.reload();
+    }, 1000);
+  },
 
   async save() {
     if (this.isSaving) return false;
     this.isSaving = true;
     try {
-      try { localStorage.setItem('ooi_data', JSON.stringify(this.data)); } catch(e) {}
+      // Обновляем кэш и время
+      try {
+        localStorage.setItem('ooi_data', JSON.stringify(this.data));
+        localStorage.setItem('ooi_cache_time', Date.now().toString());
+      } catch(e) {
+        console.warn('[Cache] Не удалось сохранить в localStorage');
+      }
+      
       const ok = await API.save(this.data);
       if (!ok) {
         this.toast('Ошибка сохранения', 'error');
@@ -1517,7 +1739,33 @@ const App = {
       document.body.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0f1a;color:#fff;text-align:center;padding:20px;"><div><h1>API_URL не настроен</h1></div></div>`;
       return;
     }
-    await this.load();
+    
+    // Автоматическая очистка кэша если он старше 5 минут
+    const cacheTime = localStorage.getItem('ooi_cache_time');
+    if (cacheTime) {
+      const cacheAge = Date.now() - parseInt(cacheTime);
+      if (cacheAge > 5 * 60 * 1000) {
+        console.log('[Init] Кэш устарел, очищаем...');
+        localStorage.removeItem('ooi_data');
+        localStorage.removeItem('ooi_cache_time');
+      }
+    }
+    
+    // Принудительно загружаем свежие данные при старте
+    console.log('[Init] Загрузка свежих данных с сервера...');
+    await this.load(true);
+    
+    // Проверка режимов обслуживания/обновления
+    if (this.data?.settings?.maintenanceMode) {
+      this.showMaintenancePage();
+      return;
+    }
+    
+    if (this.data?.settings?.updateMode) {
+      this.showUpdatePage();
+      return;
+    }
+    
     const uid = localStorage.getItem('ooi_uid');
     if (uid && this.data) {
       const u = this.data.users.find(x => x.id === uid);
@@ -3235,9 +3483,25 @@ const App = {
 
   adminSettings() {
     const s = this.data.settings;
+    const maintenanceActive = s.maintenanceMode || false;
+    const updateActive = s.updateMode || false;
+    
     return `
       <div class="card">
         <div class="card-header"><span class="card-title"><i class="fas fa-cog"></i> Настройки</span></div>
+        
+        <div style="display:grid;gap:12px;margin-bottom:24px;">
+          <button class="btn ${maintenanceActive?'btn-warning':'btn-outline'}" onclick="App.toggleMaintenanceMode()">
+            <i class="fas fa-tools"></i> ${maintenanceActive ? '🔧 Технические работы ВКЛЮЧЕНЫ (нажмите чтобы отключить)' : '🔧 Включить технические работы'}
+          </button>
+          <button class="btn ${updateActive?'btn-primary':'btn-outline'}" onclick="App.toggleUpdateMode()">
+            <i class="fas fa-bolt"></i> ${updateActive ? '⚡ Режим обновления ВКЛЮЧЁН (нажмите чтобы отключить)' : '⚡ Запустить обновление'}
+          </button>
+          <button class="btn btn-danger" onclick="App.clearCache()">
+            <i class="fas fa-trash"></i> 🗑️ Очистить кэш сайта
+          </button>
+        </div>
+        
         <div class="form-group">
           <label>Режим главной</label>
           <select class="form-input" id="setMode">
