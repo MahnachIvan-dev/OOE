@@ -1043,7 +1043,7 @@ textarea.form-input { resize: vertical; min-height: 100px; }
   <footer class="footer">
     <div class="footer-grid">
       <div>
-        <h4>О Community</h4>
+        <h4>О портале</h4>
         <p>ООИ — Организация Объединённых Империй. Сообщество цифровых государств и организаций.</p>
       </div>
       <div>
@@ -1055,10 +1055,10 @@ textarea.form-input { resize: vertical; min-height: 100px; }
       </div>
       <div>
         <h4>Типы каналов</h4>
-        <p>👑 Империи</p>
-        <p>🏛️ Организации</p>
-        <p>📰 Новостники</p>
-        <p>🤝 Союзы</p>
+        <p>Империи</p>
+        <p>Организации</p>
+        <p>Новостники</p>
+        <p>Союзы</p>
       </div>
       <div>
         <h4>Контакты</h4>
@@ -1192,28 +1192,65 @@ const App = {
   isPollingActive: false,
   connectionStatus: 'connecting', // 'connecting', 'online', 'offline'
 
-  async load() {
-    const fresh = await API.load();
-    if (fresh) {
-      const oldData = this.data;
-      this.data = fresh;
-      try { localStorage.setItem('ooi_data', JSON.stringify(this.data)); } catch(e) {}
-      
-      // Проверяем, есть ли изменения
-      if (oldData) {
-        const hasChanges = this.detectChanges(oldData, fresh);
-        if (hasChanges) {
-          console.log('[Real-time] Данные изменились, обновляем интерфейс');
-          this.onDataChanged();
+  async load(forceRefresh = false) {
+    try {
+      const fresh = await API.load();
+      if (fresh) {
+        const oldData = this.data;
+        this.data = fresh;
+        
+        // Сохраняем в localStorage только если это не принудительное обновление
+        if (!forceRefresh) {
+          try { localStorage.setItem('ooi_data', JSON.stringify(this.data)); } catch(e) {}
+        }
+        
+        // Проверяем, есть ли изменения
+        if (oldData) {
+          const hasChanges = this.detectChanges(oldData, fresh);
+          if (hasChanges) {
+            console.log('[Real-time] Данные изменились, обновляем интерфейс');
+            this.onDataChanged();
+            
+            // Уведомление только если изменения значительные
+            const oldUsersCount = oldData.users?.length || 0;
+            const newUsersCount = fresh.users?.length || 0;
+            const oldNewsCount = oldData.news?.length || 0;
+            const newNewsCount = fresh.news?.length || 0;
+            
+            if (newUsersCount > oldUsersCount) {
+              this.toast('👤 Новый пользователь присоединился!', 'info');
+            } else if (newNewsCount > oldNewsCount) {
+              this.toast('📰 Новая новость опубликована!', 'info');
+            }
+          }
+        }
+      } else if (forceRefresh) {
+        // Если принудительное обновление не удалось
+        this.toast('⚠️ Не удалось загрузить свежие данные', 'warning');
+      } else {
+        // Используем кэш если нет интернета
+        const cached = localStorage.getItem('ooi_data');
+        if (cached) {
+          try { this.data = JSON.parse(cached); } catch(e) {}
         }
       }
-    } else {
-      const cached = localStorage.getItem('ooi_data');
-      if (cached) {
-        try { this.data = JSON.parse(cached); } catch(e) {}
+    } catch (e) {
+      console.error('[Load] Error:', e);
+      if (forceRefresh) {
+        this.toast('❌ Ошибка загрузки данных', 'error');
       }
     }
+    
     if (!this.data) this.data = this.defaultData();
+  },
+  
+  // Принудительное обновление данных
+  async forceRefresh() {
+    console.log('[Real-time] Принудительное обновление данных');
+    this.updateConnectionStatus('connecting');
+    await this.load(true);
+    this.updateConnectionStatus('online');
+    this.lastDataHash = ''; // Сбрасываем хэш
   },
   
   // Определение изменений между старой и новой версией данных
@@ -1335,8 +1372,8 @@ const App = {
   async manualRefresh() {
     console.log('[Real-time] Ручное обновление запрошено');
     this.updateConnectionStatus('connecting');
-    await this.checkForUpdates();
-    this.toast('🔄 Данные обновлены', 'info');
+    await this.forceRefresh();
+    this.toast('🔄 Данные обновлены!', 'success');
   },
 
   async save() {
@@ -1938,9 +1975,15 @@ const App = {
     const isLiked = this.user && likes.includes(this.user.id);
     const typeInfo = CHANNEL_TYPES[channelType];
     
+    // Проверяем, нужно ли сокращать текст
+    const needsTruncation = n.content.length > 300 || n.content.split('\n').length > 5;
+    const previewContent = needsTruncation 
+      ? esc(n.content).substring(0, 300) + '...' 
+      : esc(n.content);
+    
     return `
       <article class="news-item">
-        ${n.image ? `<img class="news-img" src="${esc(n.image)}" onerror="this.style.display='none'">` : ''}
+        ${n.image ? `<img class="news-img" src="${esc(n.image)}" onerror="this.style.display='none'" style="width:100%;max-height:400px;object-fit:cover;">` : ''}
         <div class="news-body">
           <span class="news-category">📰 Новости</span>
           <h3 class="news-title">${esc(n.title)}</h3>
@@ -1952,13 +1995,16 @@ const App = {
             </span>
             <span><i class="fas fa-clock"></i> ${timeAgo(n.timestamp)}</span>
           </div>
-          <p class="news-excerpt">${esc(n.content).substring(0,180)}${n.content.length > 180 ? '...' : ''}</p>
-          ${n.evidenceImage ? `
-            <div class="news-evidence">
-              <strong><i class="fas fa-check-double"></i> Источник:</strong>
-              <img src="${esc(n.evidenceImage)}" onclick="window.open(this.src,'_blank')" onerror="this.style.display='none'">
-            </div>
-          ` : ''}
+          
+          <div class="news-content-wrapper" id="news-content-${n.id}">
+            <div class="news-excerpt" style="line-height:1.7;color:var(--text-secondary);">${previewContent.replace(/\n/g, '<br>')}</div>
+            ${needsTruncation ? `
+              <button class="btn btn-outline btn-sm mt-16" onclick="App.expandNews('${n.id}')">
+                <i class="fas fa-expand"></i> Читать полностью
+              </button>
+            ` : ''}
+          </div>
+          
           <div class="news-actions">
             <button class="action-btn ${isLiked?'liked':''}" onclick="App.likeNews('${n.id}')">
               <i class="fas fa-heart"></i> ${likes.length}
@@ -1968,6 +2014,28 @@ const App = {
         </div>
       </article>
     `;
+  },
+  
+  expandNews(newsId) {
+    const news = this.data.news.find(n => n.id === newsId);
+    if (!news) return;
+    
+    this.openModal(`
+      <div class="modal-header">
+        <h2>📰 ${esc(news.title)}</h2>
+        <button class="modal-close" onclick="App.closeModal()"><i class="fas fa-times"></i></button>
+      </div>
+      
+      ${news.image ? `<img src="${esc(news.image)}" style="width:100%;max-height:400px;object-fit:cover;border-radius:var(--radius);margin-bottom:16px;" onerror="this.style.display='none'">` : ''}
+      
+      <div class="news-meta mb-16">
+        <span><i class="fas fa-clock"></i> ${timeAgo(news.timestamp)}</span>
+      </div>
+      
+      <div style="line-height:1.8;color:var(--text-secondary);font-size:15px;">
+        ${esc(news.content).replace(/\n/g, '<br>')}
+      </div>
+    `);
   },
 
   goChannelByNews(newsId) {
@@ -2816,18 +2884,21 @@ const App = {
     if (!u) return c.innerHTML = '<div class="container"><div class="empty-state">Пользователь не найден</div></div>';
     
     const isOwn = u.id === this.user.id;
-    const channel = this.data.channels.find(ch => ch.ownerId === u.id);
+    const userChannels = this.data.channels.filter(ch => ch.ownerId === u.id);
+    const channel = userChannels[0]; // Первый канал для отображения
     const role = u.role || 'user';
     const isSubscribed = (u.subscribers || []).includes(this.user.id);
     const postCount = this.data.forumPosts.filter(p => p.authorId === u.id).length;
-    const newsCount = channel ? this.data.news.filter(n => n.authorId === channel.id).length : 0;
+    const newsCount = userChannels.reduce((sum, ch) => sum + this.data.news.filter(n => n.authorId === ch.id).length, 0);
     
     const roleLabel = role === 'admin' ? 'АДМИН' : role === 'moder' ? 'МОДЕР' : 'ПОЛЬЗОВАТЕЛЬ';
+    const MAX_CHANNELS = 3;
+    const canCreateMore = userChannels.length < MAX_CHANNELS;
     
     c.innerHTML = `
       <div class="container" style="padding-top:32px;">
         <div class="profile-header">
-          <div class="profile-cover" ${u.cover?`style="background-image:url('${esc(u.cover)}');background-size:cover;"`:''}></div>
+          <div class="profile-cover" ${u.cover?`style="background-image:url('${esc(u.cover)}');background-size:cover;background-position:center;"`:''}></div>
           <div class="profile-info">
             <div class="profile-avatar-wrap">
               <img class="profile-avatar" src="${esc(u.avatar || CFG.DEF_AVATAR + encodeURIComponent(u.username))}" onerror="this.src='${CFG.DEF_AVATAR}u'">
@@ -2846,7 +2917,8 @@ const App = {
                 <div class="profile-stat"><div class="profile-stat-num">${postCount}</div><div class="profile-stat-label">Постов</div></div>
                 <div class="profile-stat"><div class="profile-stat-num">${(u.subscribers||[]).length}</div><div class="profile-stat-label">Подписчиков</div></div>
                 <div class="profile-stat"><div class="profile-stat-num">${(u.subscriptions||[]).length}</div><div class="profile-stat-label">Подписок</div></div>
-                ${channel ? `<div class="profile-stat"><div class="profile-stat-num">${newsCount}</div><div class="profile-stat-label">Новостей</div></div>` : ''}
+                <div class="profile-stat"><div class="profile-stat-num">${userChannels.length}</div><div class="profile-stat-label">Каналов (${userChannels.length}/${MAX_CHANNELS})</div></div>
+                ${newsCount > 0 ? `<div class="profile-stat"><div class="profile-stat-num">${newsCount}</div><div class="profile-stat-label">Новостей</div></div>` : ''}
               </div>
               <p class="text-muted mt-16" style="font-size:13px;"><i class="fas fa-calendar"></i> На портале с ${new Date(u.joinedAt*1000).toLocaleDateString('ru-RU')}</p>
             </div>
@@ -2864,23 +2936,35 @@ const App = {
           </div>
         </div>
         
-        ${channel ? `
-          <div class="card" style="cursor:pointer;" onclick="App.go('channel/${channel.id}')">
-            <div style="display:flex;align-items:center;gap:14px;">
-              <img src="${esc(channel.avatar||CFG.DEF_AVATAR+encodeURIComponent(channel.name))}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;" onerror="this.src='${CFG.DEF_AVATAR}ch'">
-              <div style="flex:1;">
-                <div style="font-weight:800;display:flex;align-items:center;gap:8px;">
-                  <span class="channel-type-badge ${channel.type||'empire'}">${CHANNEL_TYPES[channel.type||'empire'].icon} ${CHANNEL_TYPES[channel.type||'empire'].name}</span>
-                  ${esc(channel.name)} ${channel.verified?'<i class="fas fa-check-circle verified-badge"></i>':''}
-                </div>
-                <p class="text-muted" style="font-size:13px;">${(channel.subscribers||[]).length} подписчиков</p>
-              </div>
-              <i class="fas fa-chevron-right text-muted"></i>
+        ${userChannels.length > 0 ? `
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title"><i class="fas fa-layer-group"></i> Каналы пользователя (${userChannels.length}/${MAX_CHANNELS})</span>
+              ${isOwn && canCreateMore ? `<button class="btn btn-primary btn-sm" onclick="App.modal('newChannel')"><i class="fas fa-plus"></i> Создать канал</button>` : ''}
+            </div>
+            <div style="display:grid;gap:12px;">
+              ${userChannels.map(ch => {
+                const typeInfo = CHANNEL_TYPES[ch.type || 'empire'];
+                return `
+                  <div style="display:flex;align-items:center;gap:14px;padding:12px;background:var(--bg-input);border-radius:var(--radius-sm);cursor:pointer;" onclick="App.go('channel/${ch.id}')">
+                    <img src="${esc(ch.avatar||CFG.DEF_AVATAR+encodeURIComponent(ch.name))}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;" onerror="this.src='${CFG.DEF_AVATAR}ch'">
+                    <div style="flex:1;">
+                      <div style="font-weight:800;display:flex;align-items:center;gap:8px;">
+                        <span class="channel-type-badge ${ch.type||'empire'}">${typeInfo.icon} ${typeInfo.name}</span>
+                        ${esc(ch.name)} ${ch.verified?'<i class="fas fa-check-circle verified-badge"></i>':''}
+                      </div>
+                      <p class="text-muted" style="font-size:13px;margin-top:4px;">${(ch.subscribers||[]).length} подписчиков · ${this.data.news.filter(n => n.authorId === ch.id).length} новостей</p>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted"></i>
+                  </div>
+                `;
+              }).join('')}
             </div>
           </div>
         ` : isOwn ? `
           <div class="card text-center">
-            <p class="text-muted mb-16">У вас ещё нет канала</p>
+            <p class="text-muted mb-16">У вас ещё нет каналов</p>
+            <p class="text-muted mb-16" style="font-size:13px;">Максимум ${MAX_CHANNELS} канала на пользователя</p>
             <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
               <button class="btn btn-type-empire btn-sm" onclick="App.selectedChannelType='empire';App.modal('newChannel')">👑 Империя</button>
               <button class="btn btn-type-org btn-sm" onclick="App.selectedChannelType='organization';App.modal('newChannel')">🏛️ Организация</button>
@@ -3083,16 +3167,19 @@ const App = {
             }
             return `
               <div style="padding:14px;background:var(--bg-input);border-radius:var(--radius-sm);margin-bottom:10px;">
-                <div class="flex-between">
+                <div class="flex-between" style="gap:12px;">
                   <div style="flex:1;min-width:0;">
                     <strong>${esc(n.title)}</strong>
                     <p class="text-muted" style="font-size:13px;">От: ${esc(author)} · ${timeAgo(n.timestamp)}</p>
-                    <p style="font-size:14px;margin-top:8px;">${esc(n.content).substring(0,150)}...</p>
+                    <p style="font-size:14px;margin-top:8px;line-height:1.6;">${esc(n.content).substring(0,150)}...</p>
                     ${n.image ? `<img src="${esc(n.image)}" style="max-height:100px;border-radius:6px;margin-top:8px;" onerror="this.style.display='none'">` : ''}
+                    <button class="btn btn-outline btn-sm mt-16" onclick="App.viewNewsForApproval('${n.id}')">
+                      <i class="fas fa-eye"></i> Просмотреть полностью
+                    </button>
                   </div>
                   <div style="display:flex;flex-direction:column;gap:5px;">
-                    <button class="btn btn-success btn-sm btn-icon" onclick="App.approveNews('${n.id}',true)"><i class="fas fa-check"></i></button>
-                    <button class="btn btn-danger btn-sm btn-icon" onclick="App.approveNews('${n.id}',false)"><i class="fas fa-times"></i></button>
+                    <button class="btn btn-success btn-sm btn-icon" onclick="App.approveNews('${n.id}',true)" title="Одобрить"><i class="fas fa-check"></i></button>
+                    <button class="btn btn-danger btn-sm btn-icon" onclick="App.approveNews('${n.id}',false)" title="Отклонить"><i class="fas fa-times"></i></button>
                   </div>
                 </div>
               </div>
@@ -3244,12 +3331,60 @@ const App = {
     this.toast(approve?'Верифицирован':'Отклонено', approve?'success':'warning');
     this.go('admin');
   },
+  viewNewsForApproval(newsId) {
+    const news = this.data.news.find(n => n.id === newsId);
+    if (!news) return;
+    
+    let author = 'Администрация';
+    if (news.authorType === 'channel') {
+      const ch = this.data.channels.find(c => c.id === news.authorId);
+      if (ch) author = CHANNEL_TYPES[ch.type||'empire'].icon + ' ' + ch.name;
+    }
+    
+    this.openModal(`
+      <div class="modal-header">
+        <h2>📰 Одобрение новости</h2>
+        <button class="modal-close" onclick="App.closeModal()"><i class="fas fa-times"></i></button>
+      </div>
+      
+      <div style="margin-bottom:16px;">
+        <span class="text-muted">От: ${esc(author)} · ${timeAgo(news.timestamp)}</span>
+      </div>
+      
+      ${news.image ? `<img src="${esc(news.image)}" style="width:100%;max-height:400px;object-fit:cover;border-radius:var(--radius);margin-bottom:16px;" onerror="this.style.display='none'">` : ''}
+      
+      <h3 style="margin-bottom:12px;">${esc(news.title)}</h3>
+      
+      <div style="line-height:1.8;color:var(--text-secondary);margin-bottom:20px;">
+        ${esc(news.content).replace(/\n/g, '<br>')}
+      </div>
+      
+      ${news.evidenceImage ? `
+        <div class="news-evidence">
+          <strong><i class="fas fa-check-double"></i> Доказательство / Источник:</strong>
+          <img src="${esc(news.evidenceImage)}" style="max-width:100%;margin-top:10px;border-radius:var(--radius-sm);cursor:pointer;" onclick="window.open(this.src,'_blank')">
+          <p class="text-muted" style="font-size:11px;margin-top:6px;">Нажмите для открытия в полном размере</p>
+        </div>
+      ` : '<p class="text-muted" style="text-align:center;padding:20px;background:var(--bg-input);border-radius:var(--radius-sm);"><i class="fas fa-info-circle"></i> Доказательство не предоставлено</p>'}
+      
+      <div style="display:flex;gap:10px;margin-top:20px;">
+        <button class="btn btn-success" style="flex:1;" onclick="App.approveNews('${newsId}',true)">
+          <i class="fas fa-check"></i> Одобрить
+        </button>
+        <button class="btn btn-danger" style="flex:1;" onclick="App.approveNews('${newsId}',false)">
+          <i class="fas fa-times"></i> Отклонить
+        </button>
+      </div>
+    `);
+  },
+  
   async approveNews(nId, approve) {
     const n = this.data.news.find(x => x.id === nId);
     if (!n) return;
     n.status = approve ? 'approved' : 'rejected';
     await this.save();
-    this.toast(approve?'Опубликовано':'Отклонено', approve?'success':'warning');
+    this.closeModal();
+    this.toast(approve?'✅ Опубликовано':'❌ Отклонено', approve?'success':'warning');
     this.go('admin');
   },
   async deleteNews(nId) {
@@ -3493,28 +3628,74 @@ const App = {
     const code = (document.getElementById('mAllianceCode').value || '').trim().toUpperCase();
     if (!code) return this.toast('Введите код', 'error');
     
-    const userCh = this.data.channels.find(c => c.ownerId === this.user.id && (c.type || 'empire') === 'empire');
-    if (!userCh) return this.toast('У вас нет империи', 'error');
-    if (userCh.allianceId) return this.toast('Вы уже в союзе', 'error');
+    // Находим любой канал пользователя (не только империю)
+    const userChannels = this.data.channels.filter(c => c.ownerId === this.user.id);
+    if (userChannels.length === 0) return this.toast('У вас нет каналов', 'error');
+    
+    // Проверяем, есть ли уже канал в союзе
+    const channelInAlliance = userChannels.find(c => c.allianceId);
+    if (channelInAlliance) {
+      return this.toast('Один из ваших каналов уже в союзе', 'error');
+    }
+    
+    // Если каналов несколько, даём выбрать
+    let userCh;
+    if (userChannels.length === 1) {
+      userCh = userChannels[0];
+    } else {
+      // Показываем модалку выбора канала
+      this.openModal(`
+        <div class="modal-header">
+          <h2>🤝 Выберите канал</h2>
+          <button class="modal-close" onclick="App.closeModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <p class="text-muted mb-16">У вас несколько каналов. Выберите, какой вступит в союз:</p>
+        ${userChannels.map(ch => {
+          const typeInfo = CHANNEL_TYPES[ch.type || 'empire'];
+          return `
+            <div class="card" style="cursor:pointer;margin-bottom:10px;" onclick="App.joinAllianceWithChannel('${ch.id}','${code}')">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <img src="${esc(ch.avatar || CFG.DEF_AVATAR + encodeURIComponent(ch.name))}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;" onerror="this.src='${CFG.DEF_AVATAR}ch'">
+                <div>
+                  <div style="font-weight:700;">${typeInfo.icon} ${esc(ch.name)}</div>
+                  <div class="text-muted" style="font-size:12px;">${typeInfo.name}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      `);
+      return;
+    }
+    
+    // Вступаем в союз
+    await this.joinAllianceWithChannel(userCh.id, code);
+  },
+  
+  async joinAllianceWithChannel(channelId, code) {
+    const userCh = this.data.channels.find(c => c.id === channelId);
+    if (!userCh) return;
     
     const alliance = this.data.channels.find(c => c.type === 'alliance' && c.allianceCode === code);
     if (!alliance) return this.toast('Неверный код', 'error');
     
-    // Добавляем империю в союз
+    // Добавляем канал в союз
     if (!alliance.members) alliance.members = [];
+    if (alliance.members.includes(userCh.id)) return this.toast('Канал уже в этом союзе', 'error');
+    
     alliance.members.push(userCh.id);
     userCh.allianceId = alliance.id;
     
     // Достижения
     if (!(this.user.badges||[]).includes('badge9')) this.user.badges.push('badge9');
     
-    // Активность
-    this.addActivity('join', `<strong>${esc(this.user.username)}</strong> вступил в союз <strong>${esc(alliance.name)}</strong>`);
+    const typeInfo = CHANNEL_TYPES[userCh.type || 'empire'];
+    this.addActivity('join', `<strong>${esc(this.user.username)}</strong> (${typeInfo.icon} ${esc(userCh.name)}) вступил в союз <strong>${esc(alliance.name)}</strong>`);
     
     const saved = await this.save();
     if (saved) {
       this.closeModal();
-      this.toast(`🤝 Вы вступили в союз "${alliance.name}"!`, 'success');
+      this.toast(`🤝 ${typeInfo.icon} "${userCh.name}" вступил в союз "${alliance.name}"!`, 'success');
       this.go('channel/' + alliance.id);
     }
   },
@@ -3588,36 +3769,88 @@ const App = {
   async saveProfile() {
     this.user.status = document.getElementById('mStatus').value;
     this.user.statusText = document.getElementById('mStatusText').value;
-    if (this.pendingFile) { this.user.avatar = await API.uploadImage(this.pendingFile); }
-    if (this.pendingFile2) { this.user.cover = await API.uploadImage(this.pendingFile2); }
-    this.pendingFile = null; this.pendingFile2 = null;
+    
+    // Загрузка аватара
+    if (this.pendingFile) {
+      this.toast('Загрузка аватара...', 'info');
+      try {
+        const avatarUrl = await API.uploadImage(this.pendingFile);
+        this.user.avatar = avatarUrl;
+        console.log('[Profile] Avatar uploaded:', avatarUrl);
+      } catch (e) {
+        console.error('[Profile] Avatar upload error:', e);
+        this.toast('Ошибка загрузки аватара', 'error');
+      }
+    }
+    
+    // Загрузка обложки
+    if (this.pendingFile2) {
+      this.toast('Загрузка обложки...', 'info');
+      try {
+        const coverUrl = await API.uploadImage(this.pendingFile2);
+        this.user.cover = coverUrl;
+        console.log('[Profile] Cover uploaded:', coverUrl);
+      } catch (e) {
+        console.error('[Profile] Cover upload error:', e);
+        this.toast('Ошибка загрузки обложки', 'error');
+      }
+    }
+    
+    this.pendingFile = null;
+    this.pendingFile2 = null;
+    
+    // Обновляем данные пользователя в массиве users
+    const userIndex = this.data.users.findIndex(u => u.id === this.user.id);
+    if (userIndex >= 0) {
+      this.data.users[userIndex] = { ...this.user };
+    }
+    
     const saved = await this.save();
     if (saved) {
       this.updateHeader();
       this.closeModal();
-      this.toast('Сохранено!', 'success');
+      this.toast('✅ Профиль сохранён!', 'success');
       this.go('profile');
+    } else {
+      this.toast('Ошибка сохранения', 'error');
     }
   },
 
   async createChannel() {
     const name = document.getElementById('mChName').value.trim();
     if (!name) return this.toast('Введите название', 'error');
-    if (this.data.channels.some(c => c.ownerId === this.user.id)) return this.toast('У вас уже есть канал', 'error');
+    
+    // Проверка лимита каналов (максимум 3 на пользователя)
+    const MAX_CHANNELS_PER_USER = 3;
+    const userChannels = this.data.channels.filter(c => c.ownerId === this.user.id);
+    if (userChannels.length >= MAX_CHANNELS_PER_USER) {
+      this.toast(`❌ У вас уже ${MAX_CHANNELS_PER_USER} канала — это максимум!`, 'error');
+      return;
+    }
     
     const type = this.selectedChannelType || 'empire';
     let avatar = CFG.DEF_AVATAR + encodeURIComponent(name);
     let cover = '';
     
-    if (this.pendingFile) { avatar = await API.uploadImage(this.pendingFile); }
-    if (this.pendingFile2) { cover = await API.uploadImage(this.pendingFile2); }
+    if (this.pendingFile) {
+      this.toast('Загрузка аватара...', 'info');
+      avatar = await API.uploadImage(this.pendingFile);
+    }
+    if (this.pendingFile2) {
+      this.toast('Загрузка обложки...', 'info');
+      cover = await API.uploadImage(this.pendingFile2);
+    }
     
     const ch = {
-      id: genId(), ownerId: this.user.id,
-      name, description: document.getElementById('mChDesc').value.trim(),
+      id: genId(),
+      ownerId: this.user.id,
+      name,
+      description: document.getElementById('mChDesc').value.trim(),
       avatar, cover, type,
-      verified: false, verificationRequested: false,
-      subscribers: []
+      verified: false,
+      verificationRequested: false,
+      subscribers: [],
+      allianceId: null
     };
     
     if (type === 'alliance') {
@@ -3627,13 +3860,19 @@ const App = {
     }
     
     this.data.channels.push(ch);
-    this.user.channelId = ch.id;
+    
+    // Обновляем channelId только если это первый канал
+    if (userChannels.length === 0) {
+      this.user.channelId = ch.id;
+    }
+    
     if (!(this.user.badges||[]).includes('badge5')) this.user.badges.push('badge5');
     
     this.addActivity('empire', `<strong>${esc(this.user.username)}</strong> создал ${CHANNEL_TYPES[type].name.toLowerCase()} <strong>${esc(name)}</strong>`);
     
     const saved = await this.save();
-    this.pendingFile = null; this.pendingFile2 = null;
+    this.pendingFile = null;
+    this.pendingFile2 = null;
     
     if (saved) {
       this.closeModal();
@@ -3641,7 +3880,7 @@ const App = {
       this.go('channel/' + ch.id);
     } else {
       this.data.channels.pop();
-      this.user.channelId = null;
+      if (userChannels.length === 0) this.user.channelId = null;
     }
   },
 
@@ -3685,30 +3924,91 @@ const App = {
     const title = document.getElementById('mNewsTitle').value.trim();
     const content = document.getElementById('mNewsContent').value.trim();
     if (!title || !content) return this.toast('Заполните поля', 'error');
-    const ch = this.data.channels.find(c => c.ownerId === this.user.id && c.verified && (c.type === 'news' || c.type === 'empire'));
-    if (!ch) return this.toast('Нужен верифицированный канал', 'error');
+    
+    // Находим любой верифицированный канал пользователя (любого типа)
+    const verifiedChannels = this.data.channels.filter(c => c.ownerId === this.user.id && c.verified);
+    if (verifiedChannels.length === 0) return this.toast('Нужен верифицированный канал', 'error');
+    
+    // Если верифицированных каналов несколько, даём выбрать
+    let ch;
+    if (verifiedChannels.length === 1) {
+      ch = verifiedChannels[0];
+    } else {
+      this.openModal(`
+        <div class="modal-header">
+          <h2>📰 Выберите канал</h2>
+          <button class="modal-close" onclick="App.closeModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <p class="text-muted mb-16">От чьего имени опубликовать новость?</p>
+        ${verifiedChannels.map(channel => {
+          const typeInfo = CHANNEL_TYPES[channel.type || 'empire'];
+          return `
+            <div class="card" style="cursor:pointer;margin-bottom:10px;" onclick="App.suggestNewsFromChannel('${channel.id}')">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <img src="${esc(channel.avatar || CFG.DEF_AVATAR + encodeURIComponent(channel.name))}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;" onerror="this.src='${CFG.DEF_AVATAR}ch'">
+                <div>
+                  <div style="font-weight:700;">${typeInfo.icon} ${esc(channel.name)} <i class="fas fa-check-circle verified-badge-inline"></i></div>
+                  <div class="text-muted" style="font-size:12px;">${typeInfo.name}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      `);
+      return;
+    }
+    
+    await this.suggestNewsFromChannel(ch.id);
+  },
+  
+  async suggestNewsFromChannel(channelId) {
+    const title = document.getElementById('mNewsTitle').value.trim();
+    const content = document.getElementById('mNewsContent').value.trim();
+    if (!title || !content) return this.toast('Заполните поля', 'error');
+    
+    const ch = this.data.channels.find(c => c.id === channelId);
+    if (!ch || !ch.verified) return this.toast('Канал не найден', 'error');
     
     let img = '', evidence = '';
-    if (this.pendingFile) { img = await API.uploadImage(this.pendingFile); }
-    if (this.pendingFile2) { evidence = await API.uploadImage(this.pendingFile2); }
+    if (this.pendingFile) {
+      this.toast('Загрузка изображения...', 'info');
+      img = await API.uploadImage(this.pendingFile);
+    }
+    if (this.pendingFile2) {
+      this.toast('Загрузка доказательства...', 'info');
+      evidence = await API.uploadImage(this.pendingFile2);
+    }
     
     const news = {
-      id: genId(), title, content,
-      image: img, evidenceImage: evidence,
-      authorId: ch.id, authorType: 'channel',
-      status: 'pending', likes: [], timestamp: Date.now()/1000
+      id: genId(),
+      title, content,
+      image: img,
+      evidenceImage: evidence,
+      authorId: ch.id,
+      authorType: 'channel',
+      status: 'pending',
+      likes: [],
+      timestamp: Date.now()/1000
     };
+    
     this.data.news.push(news);
     if (!(this.user.badges||[]).includes('badge4')) this.user.badges.push('badge4');
-    this.addActivity('news', `<strong>${esc(this.user.username)}</strong> предложил новость <strong>${esc(title)}</strong>`);
+    
+    const typeInfo = CHANNEL_TYPES[ch.type || 'empire'];
+    this.addActivity('news', `<strong>${esc(this.user.username)}</strong> (${typeInfo.icon} ${esc(ch.name)}) предложил новость <strong>${esc(title)}</strong>`);
     
     const saved = await this.save();
-    this.pendingFile = null; this.pendingFile2 = null;
+    this.pendingFile = null;
+    this.pendingFile2 = null;
     
-    if (saved) { this.closeModal(); this.toast('Отправлено!', 'success'); this.go('news'); }
-    else {
+    if (saved) {
+      this.closeModal();
+      this.toast('📰 Новость отправлена на модерацию!', 'success');
+      this.go('news');
+    } else {
       const idx = this.data.news.findIndex(n => n.id === news.id);
       if (idx >= 0) this.data.news.splice(idx, 1);
+      this.toast('Ошибка отправки', 'error');
     }
   },
 
